@@ -2,5 +2,5 @@
 import sys
 import subprocess
 
-subprocess.call(["appscan.sh", "version"], shell=True)
+subprocess.call(["appscan.sh version"], shell=True)
 

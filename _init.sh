@@ -32,8 +32,7 @@ debugme() {
 export -f debugme 
 
 set +e
-#set +x 
-set -x
+set +x 
 
 ###############################
 # Configure extension PATH    #
