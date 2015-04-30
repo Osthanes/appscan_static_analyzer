@@ -75,10 +75,9 @@ cp appscan_result* ${ARCHIVE_DIR}/
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
 set -x
-echo "Test call"
+echo Test call
 export SUBMISSION_NAME=#SUBMISSION_NAME#
 export BINDING_APP=#BINDING_APP#
-#set +x 
 set +e 
 . $EXT_DIR/_init.sh
 
