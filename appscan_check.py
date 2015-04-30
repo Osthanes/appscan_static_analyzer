@@ -2,7 +2,7 @@
 import json
 import os
 import sys
-from subprocess import Popen, PIPE
+from subprocess import call, Popen, PIPE
 
 app = os.environ.get('BINDING_APP')
 if app == None:
@@ -56,8 +56,14 @@ loginOut, loginErr = loginProc.communicate();
 print "out = " + loginOut
 print "err = " + loginErr
 
+if "Unable to authenticate to the service" in loginErr:
+    print "Unable to login to Static Analysis service"
+    if os.environ.get('DEBUG'):
+        call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
+    sys.exit(4)
+
 listProc = Popen(["appscan.sh list"], shell=True, stdout=PIPE, stderr=PIPE)
-listOut, listErr = loginProc.communicate();
+listOut, listErr = listProc.communicate();
 
 print "out = " + listOut
 print "err = " + listErr
