@@ -1,0 +1,89 @@
+{
+    "id": "ibm.devops.services.pipeline.appscan.static.builder",
+    "version": 1,
+    "name_key": "ExtName",
+    "desc_key": "ExtDesc",
+    "extension_type": "Build",
+    "message_key": "ExtMessage",
+    "inputs": [
+        {
+            "type": "Bluemix",
+            "inclusion" : "always"
+        }
+    ],
+    "params": [
+        {
+            "name": "BINDING_APP",
+            "type": "Text",
+            "required": "true",
+            "label_key": "BINDING_APP_KEY",
+            "desc_key": "BINDING_APP_DESC"
+        },
+        {
+            "name": "SUBMISSION_NAME",
+            "type": "Text",
+            "required": "false",
+            "label_key": "SUBMISSION_NAME_KEY",
+            "desc_key": "SUBMISSION_NAME_DESC"
+        },
+        {
+            "name": "COMMAND",
+            "type": "TextArea",
+            "required": "true",
+            "default_value" : "#!/bin/bash
+# The following colors have been defined to help with presentation of logs: green, red, label_color, no_color.  
+echo -e \"${label_color}Starting build script${no_color}\"
+
+# The CloudFoundry CLI (cf), Git client (git), IDS Inventory CLI (ids-inv), Python 2.7.3 (python), and Appscan (appscan.sh) have been installed.
+# Based on the organization and space selected in the Job, credentials are in place for IBM Bluemix 
+
+############################################
+# call python script to run appscan calls  #
+############################################
+
+if [ -f ${EXT_DIR}/appscan_check.py ]; then 
+    ${EXT_DIR}/appscan_check.py
+    RESULT=$?
+
+    if [ $RESULT -ne 0 ]; then
+        echo -e \"${red}Error running appscan ${no_color}\"
+        exit 1
+    else
+        echo -e \"${green}Application scan was successful ${no_color}\"
+    fi  
+else 
+    echo -e \"${red}Appscan helper script not available, failed.${no_color}\"
+    exit 1
+fi  
+
+########################################################################################
+# Copy any artifacts that will be needed for deployment and testing to $ARCHIVE_DIR    #
+########################################################################################
+cp appscan_result* ${ARCHIVE_DIR}/
+",
+            "label_key": "COMMAND_KEY",
+            "desc_key": "COMMAND_DESC"
+        }
+    ],
+    "outputs": [
+        {
+            "type": "Artifacts",
+            "inclusion" : "always"
+        }
+    ],
+    "execution": {
+        "type": "JenkinsDocker",
+        "shell": "#!/bin/bash
+export SUBMISSION_NAME=#SUBMISSION_NAME#
+export BINDING_APP=#BINDING_APP#
+set +x 
+set +e 
+. $EXT_DIR/_init.sh
+
+/bin/bash -e #COMMAND#"
+    }
+    },
+    "project": "https://hub.jazz.net/project/alchemy/Alchemy-Ostanes",
+    "project_example": "https://hub.jazz.net/pipeline/rjminsha/ice-pipeline_demo",
+    "project_contact": "rjminsha@us.ibm.com"
+}
