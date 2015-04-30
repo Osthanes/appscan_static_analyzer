@@ -32,7 +32,8 @@ debugme() {
 export -f debugme 
 
 set +e
-set +x 
+#set +x 
+set -x
 
 ###############################
 # Configure extension PATH    #
@@ -122,7 +123,6 @@ if [ $RESULT -ne 0 ]; then
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
         echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
-        ${EXT_DIR}/print_help.sh    
         exit 1
     fi  
     popd
