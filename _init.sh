@@ -202,8 +202,8 @@ fi
 ###############
 # setup appscan
 ###############
-wget https://appscan.ibmcloud.com/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux
-unzip -o -qq SAClientUtil*
+wget https://appscan.ibmcloud.com/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
+unzip -o -qq SAClientUtil.zip
 cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
 cd ..
