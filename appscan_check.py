@@ -203,6 +203,7 @@ def appscanList ():
 
     return scanlist
 
+# translate a job state to a pretty name
 def getStateName (state):
     return {
         0 : "Pending",
@@ -220,6 +221,44 @@ def getStateName (state):
         12 : "MissingConfiguration",
         13 : "PossibleMissingConfiguration"
     }.get(state, "Unknown")
+
+# given a state, is the job completed
+def getStateCompleted (state):
+    return {
+        0 : False,
+        1 : False,
+        2 : False,
+        3 : True,
+        4 : True,
+        5 : True,
+        6 : True,
+        7 : True,
+        8 : True,
+        9 : True,
+        10 : True,
+        11 : False,
+        12 : True,
+        13 : True
+    }.get(state, True)
+
+# given a state, was it completed successfully
+def getStateSuccessful (state):
+    return {
+        0 : False,
+        1 : False,
+        2 : False,
+        3 : True,
+        4 : False,
+        5 : False,
+        6 : True,
+        7 : False,
+        8 : False,
+        9 : False,
+        10 : False,
+        11 : False,
+        12 : False,
+        13 : False
+    }.get(state, False)
 
 # get status of a given job
 def appscanStatus (jobid):
@@ -250,14 +289,18 @@ def appscanCancel (jobid):
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-# wait for a given set of scans to complete
+# wait for a given set of scans to complete and, if successful,
+# download the results
 def waitforscans (joblist):
     for jobid in joblist:
         try:
             while True:
                 state = appscanStatus(jobid)
                 print "Job " + str(jobid) + " in state " + getStateName(state)
-                if state >= 3:
+                if getStateCompleted(state):
+                    if getStateSuccessful(state):
+                        # todo - fetch results
+                        pass
                     break
                 else:
                     time.sleep(5)
