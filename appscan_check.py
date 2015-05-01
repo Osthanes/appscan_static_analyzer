@@ -310,10 +310,15 @@ def waitforscans (joblist):
 
 
 try:
+    print "Getting credentials for Static Analysis service"
     userid, password = getCredentialsFromBoundApp(service=STATIC_ANALYSIS_SERVICE)
+    print "Connecting to Static Analysis service"
     appscanLogin(userid,password)
+    print "Scanning for code submission"
     files_to_submit = appscanPrepare()
+    print "Submitting scans for analysis"
     joblist = appscanSubmit(files_to_submit)
+    printf "Waiting for analysis to complete"
     waitforscans(joblist)
 
     # cleanup the jobs we launched (since they're complete)
