@@ -68,6 +68,8 @@ debugme echo "installing 32 bit libs"
 sudo apt-get install -y libc6-i386 lib32stdc++6 >/dev/null 2>&1
 debugme echo "installing unzip"
 sudo apt-get install -y unzip >/dev/null 2>&1
+debugme echo "installing maven"
+sudo apt-get install -y maven >/dev/null 2>&1
 debugme echo "done installing prereqs"
 
 if [ -n "$BUILD_OFFSET" ]; then 
