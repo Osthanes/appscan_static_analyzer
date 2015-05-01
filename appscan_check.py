@@ -318,7 +318,7 @@ try:
     files_to_submit = appscanPrepare()
     print "Submitting scans for analysis"
     joblist = appscanSubmit(files_to_submit)
-    printf "Waiting for analysis to complete"
+    print "Waiting for analysis to complete"
     waitforscans(joblist)
 
     # cleanup the jobs we launched (since they're complete)
