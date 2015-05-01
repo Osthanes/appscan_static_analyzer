@@ -18,10 +18,12 @@
 import json
 import os
 import sys
+import time
 from subprocess import call, Popen, PIPE
 
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
+DEFAULT_SCANNAME="staticscan"
 
 
 def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
@@ -130,7 +132,55 @@ def appscanPrepare ():
     # which files are new?
     newIrxFiles = set(newIrxFiles).difference(oldIrxFiles)
 
+    print "Generated scans as file(s):"
+    for file in newIrxFiles:
+        print "\t" + file
+
     return newIrxFiles
+
+# submit a created irx file to appscan for analysis
+def appscanSubmit (filelist):
+    if filelist==None:
+        raise Exception("No files to analyze")
+
+    # check the env for name of the scan, else use default
+    if os.environ.get('SUBMISSION_NAME'):
+        scanname=os.environ.get('SUBMISSION_NAME')
+    else:
+        scanname=DEFAULT_SCANNAME
+
+    # if we have an application version, append it to the scanname
+    if os.environ.get('APPLICATION_VERSION'):
+        scanname.append("-" + os.environ.get('APPLICATION_VERSION'))
+
+    scanlist = []
+    index = 0
+    for filename in filelist:
+        submit_scanname = scanname + "-" + str(index)
+        proc = Popen(["appscan.sh queue_analysis -f " + filename +
+                      " -n " + submit_scanname], 
+                          shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+
+        transf_found = False
+        for line in out.splitlines() :
+            if "100% transferred" in line:
+                # done transferring
+                transf_found = True
+            elif not transf_found:
+                # not done transferring yet
+                continue
+            elif line:
+                # done, if line isn't empty, is an id
+                scanlist.append(line)
+                print "Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line
+            else:
+                # empty line, skip it
+                continue
+
+        index = index + 1
+
+    return scanlist
 
 
 # get appscan list of current jobs
@@ -139,20 +189,99 @@ def appscanList ():
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-    print "out = " + out
-    print "err = " + err
+    scanlist = []
+    for line in out.splitlines() :
+        if "No analysis jobs" in line:
+            # no jobs, return empty list
+            return []
+        elif line:
+            # done, if line isn't empty, is an id
+            scanlist.append(line)
+        else:
+            # empty line, skip it
+            continue
 
-    if "Problems found" in err:
-        if os.environ.get('DEBUG'):
-            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
-        raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
-                        err)
+    return scanlist
+
+def getStateName (state):
+    return {
+        0 : "Pending",
+        1 : "Starting",
+        2 : "Running",
+        3 : "FinishedRunning",
+        4 : "FinishedRunningWithErrors",
+        5 : "PendingSupport",
+        6 : "Ready",
+        7 : "ReadyIncomplete",
+        8 : "FailedToScan",
+        9 : "ManuallyStopped",
+        10 : "None",
+        11 : "Initiating",
+        12 : "MissingConfiguration",
+        13 : "PossibleMissingConfiguration"
+    }.get(state, "Unknown")
+
+# get status of a given job
+def appscanStatus (jobid):
+    if jobid == None:
+        raise Exception("No jobid to check status")
+
+    proc = Popen(["appscan.sh status -i " + str(jobid)], 
+                      shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if "request is invalid" in err:
+        raise Exception("Invalid jobid")
+
+    retval = 0
+    try:
+        retval = int(out)
+    except ValueError:
+        raise Exception("Invalid jobid")
+
+    return retval
+
+# cancel an appscan job
+def appscanCancel (jobid):
+    if jobid == None:
+        return
+
+    proc = Popen(["appscan.sh cancel -i " + str(jobid)], 
+                      shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+# wait for a given set of scans to complete
+def waitforscans (joblist):
+    for jobid in joblist:
+        try:
+            while True:
+                state = appscanStatus(jobid)
+                print "Job " + str(jobid) + " in state " + getStateName(state)
+                if state >= 3:
+                    break
+                else:
+                    time.sleep(5)
+        except Exception:
+            # bad id, skip it
+            pass
+
 
 try:
     userid, password = getCredentialsFromBoundApp(service=STATIC_ANALYSIS_SERVICE)
     appscanLogin(userid,password)
     files_to_submit = appscanPrepare()
-    appscanList()
+    joblist = appscanSubmit(files_to_submit)
+    waitforscans(joblist)
+
+    # cleanup the jobs we launched (since they're complete)
+    for job in joblist:
+        appscanCancel(job)
+    # and cleanup the submitted irx files
+    for file in files_to_submit:
+        if os.path.isfile(file):
+            os.remove(file)
+        if os.path.isfile(file+".log"):
+            os.remove(file+".log")
 except Exception, e:
     print e
     sys.exit(1)
