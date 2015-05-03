@@ -68,8 +68,6 @@ debugme echo "installing 32 bit libs"
 sudo apt-get install -y libc6-i386 lib32stdc++6 >/dev/null 2>&1
 debugme echo "installing unzip"
 sudo apt-get install -y unzip >/dev/null 2>&1
-debugme echo "installing maven"
-sudo apt-get install -y maven >/dev/null 2>&1
 debugme echo "done installing prereqs"
 
 if [ -n "$BUILD_OFFSET" ]; then 
@@ -204,11 +202,13 @@ fi
 ###############
 # setup appscan
 ###############
+cur_dir=`pwd`
+cd ${EXT_DIR}
 wget https://appscan.ibmcloud.com/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
 unzip -o -qq SAClientUtil.zip
 cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
-cd ..
+cd $cur_dir
 export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$APPSCAN_NSTALL_DIR/bin:$LD_LIBRARY_PATH
 export APPSCAN_ENV=https://appscan.ibmcloud.com
