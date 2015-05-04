@@ -17,6 +17,7 @@
 
 import json
 import os
+import os.path
 import sys
 import time
 from subprocess import call, Popen, PIPE
@@ -100,13 +101,51 @@ def appscanLogin (userid, password):
     out, err = proc.communicate();
 
     if not "Authenticated successfully." in out:
-        if os.environ.get('DEBUG'):
-            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
         raise Exception("Unable to login to Static Analysis service")
+
+# attempt to create an appropriate appscan config file, if one does not 
+# already exist
+# config file uses this template:
+#<Configuration>
+#  <Targets>
+#    <Target outputs-only="true/false" path="scan_target_path">
+#      <CustomBuildInfo additional_classpath="dependency_path"
+#        jdk_path="JDK_path" jsp_compiler="JSP_compiler_path"/>
+#      <Include>string_pattern</Include>
+#      <Exclude>string_pattern</Exclude>
+#    </Target>
+#  </Targets>
+#</Configuration>
+#
+def createAppscanConfigFile ():
+    if os.path.isfile("appscan-config.xml"):
+        # file already exists, just use it
+        return
+
+    # build a basic config
+    f = open("appscan-config.xml", "w")
+    f.write("<Configuration>\n")
+    f.write("  <Targets>\n")
+    f.write("    <Target outputs-only=\"true\" path=\"" + os.getcwd() + "\">\n")
+    #f.write("      <CustomBuildInfo additional_classpath=\"dependency_path\"\n")
+    #f.write("        jdk_path=\"JDK_path\" jsp_compiler=\"JSP_compiler_path\"/>\n")
+    f.write("      <Include>*.jar</Include>\n")
+    f.write("      <Include>*.war</Include>\n")
+    f.write("      <Include>*.ear</Include>\n")
+    f.write("      <Include>*.class</Include>\n")
+    #f.write("      <Exclude>string_pattern</Exclude>\n")
+    f.write("    </Target>\n")
+    f.write("  </Targets>\n")
+    f.write("</Configuration>\n")
+    f.close()
 
 # callout to appscan to prepare a current irx file, return a set of
 # the files created by the prepare
 def appscanPrepare ():
+
+    # create a config file, if needed
+    createAppscanConfigFile()
+
     # sadly, prepare doesn't tell us what file it created, so find
     # out by a list compare before/after
     oldIrxFiles = []
@@ -120,7 +159,7 @@ def appscanPrepare ():
 
     if not "IRX file generation successful" in out:
         if os.environ.get('DEBUG'):
-            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
+            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log | tail -n 10"], shell=True)
         raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
                         err)
 
@@ -289,6 +328,126 @@ def appscanCancel (jobid):
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
+# parse a key=value line, return value
+def parseKeyEqVal (line):
+    if line == None:
+        return None
+
+    eqIndex = line.find("=");
+    if eqIndex != -1:
+        return line[eqIndex+1:]
+    else:
+        return None
+
+# extended info on a current appscan job.  this comes back in a form
+# similar to:
+#NLowIssues=0
+#ReadStatus=2
+#NHighIssues=0
+#Name=appscan.zip
+#ScanEndTime=2014-11-20T13:56:04.497Z
+#Progress=0
+#RemainingFreeRescanMinutes=0
+#ParentJobId=00000000-0000-0000-0000-000000000000
+#EnableMailNotifications=false
+#JobStatus=6
+#NInfoIssues=0
+#JobId=9b344fc7-bc70-e411-b922-005056924f9b
+#NIssuesFound=0
+#CreatedAt=2014-11-20T13:54:49.597Z
+#UserMessage=Scan completed successfully. The report is ready.
+#NMediumIssues=0
+#Result=1
+#
+# parse it and return useful parts.  in particular, returns
+# NInfo, NLow, NMedium, NHigh, userMessage
+def appscanInfo (jobid):
+    if jobid == None:
+        return
+
+    proc = Popen(["appscan.sh info -i " + str(jobid)], 
+                      shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    Progress = 100
+    NInfo = 0
+    NLow = 0
+    NMed = 0
+    NHigh = 0
+    jobName = ""
+    userMsg = ""
+    for line in out.splitlines() :
+        if "NLowIssues=" in line:
+            # number of low severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                try:
+                    NLow = int(tmpstr)
+                except ValueError:
+                    NLow = 0
+
+            elif "NMediumIssues=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    try:
+                        NMed = int(tmpstr)
+                    except ValueError:
+                        NMed = 0
+
+            elif "NHighIssues=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    try:
+                        NHigh = int(tmpstr)
+                    except ValueError:
+                        NHigh = 0
+
+            elif "NInfoIssues=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    try:
+                        NInfo = int(tmpstr)
+                    except ValueError:
+                        NInfo = 0
+
+            elif "Progress=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    try:
+                        Progress = int(tmpstr)
+                    except ValueError:
+                        Progress = 0
+
+            elif "Name=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    jobName = tmpstr
+
+            elif "UserMessage=" in line:
+                # number of medium severity issues found in the scan
+                tmpstr = parseKeyEqVal(line)
+                if tmpstr != None:
+                    userMsg = tmpstr
+
+    return NInfo, NLow, NMed, NHigh, Progress, jobName, userMsg
+
+# get the result file for a given job
+def appscanGetResult (jobid):
+    if jobid == None:
+        return
+
+    proc = Popen(["appscan.sh get_result -i " + str(jobid)], 
+                      shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    print "Out = " + out
+    print "Err = " + err
+
 # wait for a given set of scans to complete and, if successful,
 # download the results
 def waitforscans (joblist):
@@ -298,12 +457,22 @@ def waitforscans (joblist):
                 state = appscanStatus(jobid)
                 print "Job " + str(jobid) + " in state " + getStateName(state)
                 if getStateCompleted(state):
+                    info,low,med,high,prog,name,msg = appscanInfo(jobid)
                     if getStateSuccessful(state):
+                        print "Analysis successful (" + name + ")"
+                        print "\tInfo Issues   : " + str(info)
+                        print "\tLow Issues    : " + str(low)
+                        print "\tMedium Issues : " + str(med)
+                        print "\tHigh Issues   : " + str(high)
+                        print "\tOther Message : " + msg
                         # todo - fetch results
-                        pass
+                    else: 
+                        print "Analysis unsuccessful"
+
+                    appscanGetResult(jobid)
                     break
                 else:
-                    time.sleep(5)
+                    time.sleep(10)
         except Exception:
             # bad id, skip it
             pass
@@ -330,11 +499,11 @@ try:
     for job in joblist:
         appscanCancel(job)
     # and cleanup the submitted irx files
-    for file in files_to_submit:
-        if os.path.isfile(file):
-            os.remove(file)
-        if os.path.isfile(file+".log"):
-            os.remove(file+".log")
+    #for file in files_to_submit:
+    #    if os.path.isfile(file):
+    #        os.remove(file)
+    #    if os.path.isfile(file+".log"):
+    #        os.remove(file+".log")
 except Exception, e:
     print e
     sys.exit(1)
