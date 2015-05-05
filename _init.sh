@@ -116,7 +116,7 @@ if [ $RESULT -ne 0 ]; then
     echo "Installing Cloud Foundry CLI"
     pushd . 
     cd $EXT_DIR 
-    curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary >/dev/null
+    curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
     gunzip cf-linux-amd64.tgz &> /dev/null
     tar -xvf cf-linux-amd64.tar  &> /dev/null
     cf help &> /dev/null
