@@ -26,7 +26,22 @@ STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
 DEFAULT_SCANNAME="staticscan"
 
+# check cli args, set globals appropriately
+def parseArgs ():
+    parsedArgs = {}
+    parsedArgs['loginonly'] = False
+    parsedArgs['cleanup'] = False
+    for arg in sys.argv:
+        if arg == "--loginonly":
+            parsedArgs['loginonly'] = True
+        if arg == "--cleanup":
+            parsedArgs['cleanup'] = True
 
+    return parsedArgs
+
+# find given bound app, and look for the passed bound service in cf.  once
+# found in VCAP_SERVICES, look for the credentials setting, and extract
+# userid, password.  Raises Exception on errors
 def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
     # if no binding app parm passed, try to get it from env
     if binding_app == None:
@@ -103,48 +118,9 @@ def appscanLogin (userid, password):
     if not "Authenticated successfully." in out:
         raise Exception("Unable to login to Static Analysis service")
 
-# attempt to create an appropriate appscan config file, if one does not 
-# already exist
-# config file uses this template:
-#<Configuration>
-#  <Targets>
-#    <Target outputs-only="true/false" path="scan_target_path">
-#      <CustomBuildInfo additional_classpath="dependency_path"
-#        jdk_path="JDK_path" jsp_compiler="JSP_compiler_path"/>
-#      <Include>string_pattern</Include>
-#      <Exclude>string_pattern</Exclude>
-#    </Target>
-#  </Targets>
-#</Configuration>
-#
-def createAppscanConfigFile ():
-    if os.path.isfile("appscan-config.xml"):
-        # file already exists, just use it
-        return
-
-    # build a basic config
-    f = open("appscan-config.xml", "w")
-    f.write("<Configuration>\n")
-    f.write("  <Targets>\n")
-    f.write("    <Target outputs-only=\"true\" path=\"" + os.getcwd() + "\">\n")
-    #f.write("      <CustomBuildInfo additional_classpath=\"dependency_path\"\n")
-    #f.write("        jdk_path=\"JDK_path\" jsp_compiler=\"JSP_compiler_path\"/>\n")
-    f.write("      <Include>*.jar</Include>\n")
-    f.write("      <Include>*.war</Include>\n")
-    f.write("      <Include>*.ear</Include>\n")
-    f.write("      <Include>*.class</Include>\n")
-    #f.write("      <Exclude>string_pattern</Exclude>\n")
-    f.write("    </Target>\n")
-    f.write("  </Targets>\n")
-    f.write("</Configuration>\n")
-    f.close()
-
 # callout to appscan to prepare a current irx file, return a set of
 # the files created by the prepare
 def appscanPrepare ():
-
-    # create a config file, if needed
-    createAppscanConfigFile()
 
     # sadly, prepare doesn't tell us what file it created, so find
     # out by a list compare before/after
@@ -465,11 +441,10 @@ def waitforscans (joblist):
                         print "\tMedium Issues : " + str(med)
                         print "\tHigh Issues   : " + str(high)
                         print "\tOther Message : " + msg
-                        # todo - fetch results
+                        appscanGetResult(jobid)
                     else: 
                         print "Analysis unsuccessful"
 
-                    appscanGetResult(jobid)
                     break
                 else:
                     time.sleep(10)
@@ -478,13 +453,21 @@ def waitforscans (joblist):
             pass
 
 
+# begin main execution sequence
+
 try:
+    parsedArgs = parseArgs()
     print "Getting credentials for Static Analysis service"
     sys.stdout.flush()
     userid, password = getCredentialsFromBoundApp(service=STATIC_ANALYSIS_SERVICE)
     print "Connecting to Static Analysis service"
     sys.stdout.flush()
     appscanLogin(userid,password)
+
+    if parsedArgs['loginonly']:
+        print "LoginOnly set, login complete, exiting"
+        sys.exit(0)
+
     print "Scanning for code submission"
     sys.stdout.flush()
     files_to_submit = appscanPrepare()
@@ -495,15 +478,17 @@ try:
     sys.stdout.flush()
     waitforscans(joblist)
 
-    # cleanup the jobs we launched (since they're complete)
-    for job in joblist:
-        appscanCancel(job)
-    # and cleanup the submitted irx files
-    #for file in files_to_submit:
-    #    if os.path.isfile(file):
-    #        os.remove(file)
-    #    if os.path.isfile(file+".log"):
-    #        os.remove(file+".log")
+    if parsedArgs['cleanup']:
+        # cleanup the jobs we launched (since they're complete)
+        print "Cleaning up"
+        for job in joblist:
+            appscanCancel(job)
+        # and cleanup the submitted irx files
+        for file in files_to_submit:
+            if os.path.isfile(file):
+                os.remove(file)
+            if os.path.isfile(file+".log"):
+                os.remove(file+".log")
 except Exception, e:
     print e
     sys.exit(1)
