@@ -25,17 +25,21 @@ from subprocess import call, Popen, PIPE
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
 DEFAULT_SCANNAME="staticscan"
+DEFAULT_BRIDGEAPP_NAME="containerbridge"
 
 # check cli args, set globals appropriately
 def parseArgs ():
     parsedArgs = {}
     parsedArgs['loginonly'] = False
     parsedArgs['cleanup'] = False
+    parsedArgs['createbinding'] = False
     for arg in sys.argv:
         if arg == "--loginonly":
             parsedArgs['loginonly'] = True
         if arg == "--cleanup":
             parsedArgs['cleanup'] = True
+        if arg == "--createbinding":
+            parsedArgs['createbinding'] = True
 
     return parsedArgs
 
@@ -47,7 +51,6 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        print "findBoundApp: couldn't run cf services"
         return None
 
     foundHeader = False
@@ -101,7 +104,80 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
 # attempt to create it.  Then bind the service to that app.  If it 
 # all works, return that app name as the bound app
 def createBoundAppForService (service=DEFAULT_SERVICE):
-    return None
+
+    # first look to see if the bridge app already exists
+    proc = Popen(["cf apps"], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        return None
+
+    appExists = False
+    for line in out.splitlines():
+        if line.startswith(DEFAULT_BRIDGEAPP_NAME + " "):
+            # found it!
+            appExists = True
+
+    # our bridge app isn't around, create it
+    if not appExists:
+        print "No bridge app, creating"
+        proc = Popen(["cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"], 
+                     shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+
+        if proc.returncode != 0:
+            return None
+
+    # look to see if we have the service in our space
+    proc = Popen(["cf services"], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        return None
+
+    foundHeader = False
+    serviceStart = -1
+    serviceEnd = -1
+    serviceName = None
+    for line in out.splitlines():
+        if (foundHeader == False) and (line.startswith("name")):
+            # this is the header bar, find out the spacing to parse later
+            # header is of the format:
+            #name          service      plan   bound apps    last operation
+            # and the spacing is maintained for following lines
+            serviceStart = line.find("service")
+            serviceEnd = line.find("plan")-1
+            foundHeader = True
+        elif foundHeader:
+            # have found the headers, looking for our service
+            if service in line:
+                # maybe found it, double check by making
+                # sure the service is in the right place,
+                # assuming we can check it
+                if (serviceStart > 0) and (serviceEnd > 0):
+                    if service in line[serviceStart:serviceEnd]:
+                        # this is the correct line - find the bound app(s)
+                        # if there are any
+                        serviceName = line[:serviceStart]
+                        serviceName = serviceName.strip()
+        else:
+            continue
+
+    # if we don't have the service name, means it's not bound in our space, so go
+    # bind it into our space if possible
+    if serviceName == None:
+        print "Have to make the service"
+        #TODO
+
+    # now try to bind the service to our bridge app
+    proc = Popen(["cf bind-service " + DEFAULT_BRIDGEAPP_NAME + " \"" + serviceName + "\""], 
+                 shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        return None
+
+    return DEFAULT_BRIDGEAPP_NAME
 
 # find given bound app, and look for the passed bound service in cf.  once
 # found in VCAP_SERVICES, look for the credentials setting, and extract
@@ -535,6 +611,7 @@ try:
     sys.stdout.flush()
     appscanLogin(userid,password)
 
+    # allow testing connection without full job scan and submission
     if parsedArgs['loginonly']:
         print "LoginOnly set, login complete, exiting"
         sys.exit(0)
