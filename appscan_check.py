@@ -39,6 +39,70 @@ def parseArgs ():
 
     return parsedArgs
 
+# search cf, find an app in our space bound to the given service, and return
+# the app name if found, or None if not
+def findBoundAppForService (service=DEFAULT_SERVICE):
+
+    proc = Popen(["cf services"], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        print "findBoundApp: couldn't run cf services"
+        return None
+
+    foundHeader = False
+    serviceStart = -1
+    serviceEnd = -1
+    boundStart = -1
+    boundEnd = -1
+    boundApp = None
+    for line in out.splitlines():
+        if (foundHeader == False) and (line.startswith("name")):
+            # this is the header bar, find out the spacing to parse later
+            # header is of the format:
+            #name          service      plan   bound apps    last operation
+            # and the spacing is maintained for following lines
+            serviceStart = line.find("service")
+            serviceEnd = line.find("plan")-1
+            boundStart = line.find("bound apps")
+            boundEnd = line.find("last operation")
+            foundHeader = True
+        elif foundHeader:
+            # have found the headers, looking for our service
+            if service in line:
+                # maybe found it, double check by making
+                # sure the service is in the right place,
+                # assuming we can check it
+                if (serviceStart > 0) and (serviceEnd > 0) and (boundStart > 0) and (boundEnd > 0):
+                    if service in line[serviceStart:serviceEnd]:
+                        # this is the correct line - find the bound app(s)
+                        # if there are any
+                        boundApp = line[boundStart:boundEnd]
+        else:
+            continue
+
+    # if we found a binding, make sure we only care about the first one
+    if boundApp != None:
+        if boundApp.find(",") >=0 :
+            boundApp = boundApp[:boundApp.find(",")]
+        boundApp = boundApp.strip()
+        if boundApp=="":
+            boundApp = None
+
+    if os.environ.get('DEBUG'):
+        if boundApp == None:
+            print "No existing apps found bound to service \"" + service + "\""
+        else:
+            print "Found existing service \"" + boundApp + "\" bound to service \"" + service + "\""
+
+    return boundApp
+
+# look for our bridge app to bind this service to.  If it's not there,
+# attempt to create it.  Then bind the service to that app.  If it 
+# all works, return that app name as the bound app
+def createBoundAppForService (service=DEFAULT_SERVICE):
+    return None
+
 # find given bound app, and look for the passed bound service in cf.  once
 # found in VCAP_SERVICES, look for the credentials setting, and extract
 # userid, password.  Raises Exception on errors
@@ -46,7 +110,14 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
     # if no binding app parm passed, try to get it from env
     if binding_app == None:
         binding_app = os.environ.get('BINDING_APP')
-    # if still no parm, can't continue, fail out
+    # if still no binding app, go looking to find a bound app for this one
+    if binding_app == None:
+        binding_app = findBoundAppForService(service)
+    # if still no binding app... CREATE ONE!
+    if binding_app == None:
+        binding_app = createBoundAppForService(service)
+
+    # if STILL no binding app, we're out of options, just fail out
     if binding_app == None:
         raise Exception("BINDING_APP is not set - this must be set to get the proper credentials.")
 

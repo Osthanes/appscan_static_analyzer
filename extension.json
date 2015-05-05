@@ -13,13 +13,6 @@
     ],
     "params": [
         {
-            "name": "BINDING_APP",
-            "type": "Text",
-            "required": "true",
-            "label_key": "BINDING_APP_KEY",
-            "desc_key": "BINDING_APP_DESC"
-        },
-        {
             "name": "SUBMISSION_NAME",
             "type": "Text",
             "required": "false",
@@ -75,7 +68,6 @@ cp appscan_result* ${ARCHIVE_DIR}/
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
 export SUBMISSION_NAME=#SUBMISSION_NAME#
-export BINDING_APP=#BINDING_APP#
 set +x
 set +e 
 . $EXT_DIR/_init.sh
