@@ -203,6 +203,9 @@ cur_dir=`pwd`
 cd ${EXT_DIR}
 wget https://appscan.ibmcloud.com/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
 unzip -o -qq SAClientUtil.zip
+if [ $? -eq 9 ]; then
+    unzip -o -qq SAClientLocal.zip
+fi
 cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
 cd $cur_dir
