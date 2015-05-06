@@ -111,11 +111,12 @@ def checkAndCreateBridgeApp ():
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
+    if os.environ.get('DEBUG'):
+        print "command \"" + command + "\" returned with rc=" + str(proc.returncode)
+        print "\tstdout was " + out
+        print "\tstderr was " + err
+
     if proc.returncode != 0:
-        if os.environ.get('DEBUG'):
-            print "command \"" + command + "\" failed with rc=" + str(proc.returncode)
-            print "\tstdout was " + out
-            print "\tstderr was " + err
         return None
 
     for line in out.splitlines():
@@ -131,11 +132,12 @@ def checkAndCreateBridgeApp ():
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
+    if os.environ.get('DEBUG'):
+        print "command \"" + command + "\" returned with rc=" + str(proc.returncode)
+        print "\tstdout was " + out
+        print "\tstderr was " + err
+
     if proc.returncode != 0:
-        if os.environ.get('DEBUG'):
-            print "command \"" + command + "\" failed with rc=" + str(proc.returncode)
-            print "\tstdout was " + out
-            print "\tstderr was " + err
         print "Unable to create bridge app, error was: " + out
         return False
 
