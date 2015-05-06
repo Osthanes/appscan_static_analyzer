@@ -128,6 +128,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         out, err = proc.communicate();
 
         if proc.returncode != 0:
+            print "Unable to create bridge app, error was: " + err
             return None
 
     # look to see if we have the service in our space
@@ -135,6 +136,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
+        print "Unable to lookup services, error was: " + err
         return None
 
     foundHeader = False
@@ -175,6 +177,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         out, err = proc.communicate();
 
         if proc.returncode != 0:
+            print "Unable to create service in this space, error was: " + err
             return None
 
     # now try to bind the service to our bridge app
@@ -184,6 +187,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
+        print "Unable to bind service to the bridge app, error was: " + err
         return None
 
     return DEFAULT_BRIDGEAPP_NAME
@@ -192,10 +196,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
 # found in VCAP_SERVICES, look for the credentials setting, and extract
 # userid, password.  Raises Exception on errors
 def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
-    # if no binding app parm passed, try to get it from env
-    if binding_app == None:
-        binding_app = os.environ.get('BINDING_APP')
-    # if still no binding app, go looking to find a bound app for this one
+    # if no binding app parm passed, go looking to find a bound app for this one
     if binding_app == None:
         binding_app = findBoundAppForService(service)
     # if still no binding app, and the user agreed, CREATE IT!
@@ -204,12 +205,11 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
         if (acceptLicense != None) and (acceptLicense.lower() == "true"):
             binding_app = createBoundAppForService(service)
         else:
-            print "Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically"
-            sys.exit(5)
+            raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically")
 
     # if STILL no binding app, we're out of options, just fail out
     if binding_app == None:
-        raise Exception("BINDING_APP is not set - this must be set to get the proper credentials.")
+        raise Exception("Unable to access an app bound to the Static Analysis service - this must be set to get the proper credentials.")
 
     # try to read the env vars off the bound app in cloud foundry, the one we
     # care about is "VCAP_SERVICES"
@@ -218,7 +218,7 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
     verOut, verErr = verProc.communicate();
 
     if verProc.returncode != 0:
-        raise Exception("Unable to read env vars off BINDING_APP - please check that it is set correctly.")
+        raise Exception("Unable to read credential information off the app bound to the Static Analysis service - please check that it is set correctly.")
 
     envList = []
     envIndex = 0
