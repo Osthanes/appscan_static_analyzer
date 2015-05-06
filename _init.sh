@@ -80,7 +80,6 @@ echo "APPLICATION_VERSION: $APPLICATION_VERSION"
 
 if [ -z $SUBMISSION_NAME ]; then 
     echo -e "${red}Please set SUBMISSION_NAME in the environment to desired name ${no_color}"
-    ${EXT_DIR}/print_help.sh
     exit 1
 fi 
 
@@ -89,7 +88,6 @@ fi
 ################################
 if [ -z $WORKSPACE ]; then 
     echo -e "${red}Please set WORKSPACE in the environment${no_color}"
-    ${EXT_DIR}/print_help.sh
     exit 1
 fi 
 
@@ -155,12 +153,10 @@ if [ -n "$BLUEMIX_USER" ] || [ ! -f ~/.cf/config.json ]; then
     # Get the Bluemix user and password information 
     if [ -z "$BLUEMIX_USER" ]; then 
         echo -e "${red} Please set BLUEMIX_USER on environment ${no_color} "
-        ${EXT_DIR}/print_help.sh
         exit 1
     fi 
     if [ -z "$BLUEMIX_PASSWORD" ]; then 
         echo -e "${red} Please set BLUEMIX_PASSWORD as an environment property environment ${no_color} "
-        ${EXT_DIR}/print_help.sh    
         exit 1 
     fi 
     if [ -z "$BLUEMIX_ORG" ]; then 
