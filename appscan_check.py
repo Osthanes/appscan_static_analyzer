@@ -104,6 +104,20 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
 
 # look for our default bridge app.  if it's not there, create it
 def checkAndCreateBridgeApp ():
+    # first look to see if the bridge app already exists
+    command = "cf apps"
+    if os.environ.get('DEBUG'):
+        print "Executing command \"" + command + "\""
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        if os.environ.get('DEBUG'):
+            print "command \"" + command + "\" failed with rc=" + str(proc.returncode)
+            print "\tstdout was " + out
+            print "\tstderr was " + err
+        return None
+
     for line in out.splitlines():
         if line.startswith(DEFAULT_BRIDGEAPP_NAME + " "):
             # found it!
@@ -119,7 +133,7 @@ def checkAndCreateBridgeApp ():
 
     if proc.returncode != 0:
         if os.environ.get('DEBUG'):
-            print "command failed with rc=" + str(proc.returncode)
+            print "command \"" + command + "\" failed with rc=" + str(proc.returncode)
             print "\tstdout was " + out
             print "\tstderr was " + err
         print "Unable to create bridge app, error was: " + out
@@ -132,13 +146,6 @@ def checkAndCreateBridgeApp ():
 # attempt to create it.  Then bind the service to that app.  If it 
 # all works, return that app name as the bound app
 def createBoundAppForService (service=DEFAULT_SERVICE):
-
-    # first look to see if the bridge app already exists
-    proc = Popen(["cf apps"], shell=True, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate();
-
-    if proc.returncode != 0:
-        return None
 
     if not checkAndCreateBridgeApp():
         return None
