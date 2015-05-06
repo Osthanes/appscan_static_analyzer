@@ -24,6 +24,8 @@ from subprocess import call, Popen, PIPE
 
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
+DEFAULT_SERVICE_PLAN="free"
+DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="containerbridge"
 
@@ -120,7 +122,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
 
     # our bridge app isn't around, create it
     if not appExists:
-        print "No bridge app, creating"
+        print "Bridge app does not exist, attempting to create it"
         proc = Popen(["cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"], 
                      shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
@@ -163,13 +165,20 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         else:
             continue
 
-    # if we don't have the service name, means it's not bound in our space, so go
-    # bind it into our space if possible
+    # if we don't have the service name, means the tile isn't created in our space, so go
+    # load it into our space if possible
     if serviceName == None:
-        print "Have to make the service"
-        #TODO
+        print "Service \"" + service + "\" is not loaded in this space, attempting to load it"
+        serviceName = DEFAULT_SERVICE_NAME
+        proc = Popen(["cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""], 
+                     shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+
+        if proc.returncode != 0:
+            return None
 
     # now try to bind the service to our bridge app
+    print "Binding service \"" + serviceName + "\" to app \"" + DEFAULT_BRIDGEAPP_NAME + "\""
     proc = Popen(["cf bind-service " + DEFAULT_BRIDGEAPP_NAME + " \"" + serviceName + "\""], 
                  shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
@@ -189,9 +198,14 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
     # if still no binding app, go looking to find a bound app for this one
     if binding_app == None:
         binding_app = findBoundAppForService(service)
-    # if still no binding app... CREATE ONE!
+    # if still no binding app, and the user agreed, CREATE IT!
     if binding_app == None:
-        binding_app = createBoundAppForService(service)
+        acceptLicense = os.environ.get('ACCEPT_SERVICE_TERMS')
+        if (acceptLicense != None) and (acceptLicense.lower() == "true"):
+            binding_app = createBoundAppForService(service)
+        else:
+            print "Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically"
+            sys.exit(5)
 
     # if STILL no binding app, we're out of options, just fail out
     if binding_app == None:

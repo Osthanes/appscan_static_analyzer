@@ -13,6 +13,14 @@
     ],
     "params": [
         {
+            "name": "ACCEPT_SERVICE_TERMS",
+            "type": "Text",
+            "required": "true",
+            "default_value": "false",
+            "label_key": "ACCEPT_KEY",
+            "desc_key": "ACCEPT_DESC"
+        },
+        {
             "name": "SUBMISSION_NAME",
             "type": "Text",
             "required": "false",
@@ -68,6 +76,7 @@ cp appscan_result* ${ARCHIVE_DIR}/
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
 export SUBMISSION_NAME=#SUBMISSION_NAME#
+export ACCEPT_SERVICE_TERMS=#ACCEPT_SERVICE_TERMS#
 set +x
 set +e 
 . $EXT_DIR/_init.sh
