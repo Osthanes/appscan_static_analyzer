@@ -128,7 +128,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         out, err = proc.communicate();
 
         if proc.returncode != 0:
-            print "Unable to create bridge app, error was: " + err
+            print "Unable to create bridge app, error was: " + out
             return None
 
     # look to see if we have the service in our space
@@ -136,7 +136,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        print "Unable to lookup services, error was: " + err
+        print "Unable to lookup services, error was: " + out
         return None
 
     foundHeader = False
@@ -177,7 +177,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         out, err = proc.communicate();
 
         if proc.returncode != 0:
-            print "Unable to create service in this space, error was: " + err
+            print "Unable to create service in this space, error was: " + out
             return None
 
     # now try to bind the service to our bridge app
@@ -187,7 +187,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        print "Unable to bind service to the bridge app, error was: " + err
+        print "Unable to bind service to the bridge app, error was: " + out
         return None
 
     return DEFAULT_BRIDGEAPP_NAME
