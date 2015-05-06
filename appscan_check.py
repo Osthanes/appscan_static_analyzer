@@ -102,6 +102,32 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
 
     return boundApp
 
+# look for our default bridge app.  if it's not there, create it
+def checkAndCreateBridgeApp ():
+    for line in out.splitlines():
+        if line.startswith(DEFAULT_BRIDGEAPP_NAME + " "):
+            # found it!
+            return True
+
+    # our bridge app isn't around, create it
+    print "Bridge app does not exist, attempting to create it"
+    command = "cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"
+    if os.environ.get('DEBUG'):
+        print "Executing command \"" + command + "\""
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        if os.environ.get('DEBUG'):
+            print "command failed with rc=" + str(proc.returncode)
+            print "\tstdout was " + out
+            print "\tstderr was " + err
+        print "Unable to create bridge app, error was: " + out
+        return False
+
+    return True
+
+
 # look for our bridge app to bind this service to.  If it's not there,
 # attempt to create it.  Then bind the service to that app.  If it 
 # all works, return that app name as the bound app
@@ -114,22 +140,8 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     if proc.returncode != 0:
         return None
 
-    appExists = False
-    for line in out.splitlines():
-        if line.startswith(DEFAULT_BRIDGEAPP_NAME + " "):
-            # found it!
-            appExists = True
-
-    # our bridge app isn't around, create it
-    if not appExists:
-        print "Bridge app does not exist, attempting to create it"
-        proc = Popen(["cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"], 
-                     shell=True, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate();
-
-        if proc.returncode != 0:
-            print "Unable to create bridge app, error was: " + out
-            return None
+    if not checkAndCreateBridgeApp():
+        return None
 
     # look to see if we have the service in our space
     proc = Popen(["cf services"], shell=True, stdout=PIPE, stderr=PIPE)
@@ -172,7 +184,10 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     if serviceName == None:
         print "Service \"" + service + "\" is not loaded in this space, attempting to load it"
         serviceName = DEFAULT_SERVICE_NAME
-        proc = Popen(["cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""], 
+        command = "cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""
+        if os.environ.get('DEBUG'):
+            print "Executing command \"" + command + "\""
+        proc = Popen([command], 
                      shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
 
