@@ -261,8 +261,8 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
         binding_app = findBoundAppForService(service)
     # if still no binding app, and the user agreed, CREATE IT!
     if binding_app == None:
-        acceptLicense = os.environ.get('ACCEPT_SERVICE_TERMS')
-        if (acceptLicense != None) and (acceptLicense.lower() == "true"):
+        setupSpace = os.environ.get('SETUP_SERVICE_SPACE')
+        if (setupSpace != None) and (setupSpace.lower() == "true"):
             binding_app = createBoundAppForService(service)
         else:
             raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically")
@@ -387,7 +387,7 @@ def appscanSubmit (filelist):
 
     # if we have an application version, append it to the scanname
     if os.environ.get('APPLICATION_VERSION'):
-        scanname.append("-" + os.environ.get('APPLICATION_VERSION'))
+        scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
 
     scanlist = []
     index = 0
