@@ -60,6 +60,13 @@ fi
 ########################################################################################
 # Copy any artifacts that will be needed for deployment and testing to $ARCHIVE_DIR    #
 ########################################################################################
+
+##############################
+# rough build time, this run
+##############################
+BUILD_END_TIME=$(date +\"%s\")
+BUILD_EST_TIME=$(($BUILD_END_TIME-$BUILD_START_TIME))
+echo -e \"Internal build time of `date -u -d @\"$BUILD_EST_TIME\" +'%-Mm %-Ss'`\"
 ",
             "label_key": "COMMAND_KEY",
             "desc_key": "COMMAND_DESC"
@@ -74,6 +81,7 @@ fi
     "execution": {
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
+export BUILD_START_TIME=$(date +"%s")
 export SUBMISSION_NAME=#SUBMISSION_NAME#
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
 set +x
