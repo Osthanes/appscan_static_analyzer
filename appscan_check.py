@@ -573,11 +573,6 @@ def appscanInfo (jobid):
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-    if os.environ.get('DEBUG'):
-        print "command " + command + " had rc " + str(proc.returncode)
-        print "/t out: " + out
-        print "/t err: " + err
-
     Progress = 100
     NInfo = 0
     NLow = 0

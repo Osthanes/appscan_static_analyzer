@@ -60,7 +60,6 @@ fi
 ########################################################################################
 # Copy any artifacts that will be needed for deployment and testing to $ARCHIVE_DIR    #
 ########################################################################################
-cp appscan_result* ${ARCHIVE_DIR}/
 ",
             "label_key": "COMMAND_KEY",
             "desc_key": "COMMAND_DESC"
