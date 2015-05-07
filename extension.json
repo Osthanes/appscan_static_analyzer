@@ -39,6 +39,13 @@ echo -e \"${label_color}Starting build script${no_color}\"
 # The CloudFoundry CLI (cf), Git client (git), IDS Inventory CLI (ids-inv), Python 2.7.3 (python), and Appscan (appscan.sh) have been installed.
 # Based on the organization and space selected in the Job, credentials are in place for IBM Bluemix 
 
+# helper function to print the end time for this script
+end_script_time() {
+    SCRIPT_END_TIME=$(date +\"%s\")
+    SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$SCRIPT_START_TIME))
+    echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+}
+
 ############################################
 # call python script to run appscan calls  #
 ############################################
@@ -49,12 +56,14 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
 
     if [ $RESULT -ne 0 ]; then
         echo -e \"${red}Error running appscan ${no_color}\"
+        end_script_time
         exit 1
     else
         echo -e \"${green}Application scan was successful ${no_color}\"
     fi  
 else 
     echo -e \"${red}Appscan helper script not available, failed.${no_color}\"
+    end_script_time
     exit 1
 fi  
 
@@ -65,9 +74,7 @@ fi
 ##############################
 # rough build time, this run
 ##############################
-SCRIPT_END_TIME=$(date +\"%s\")
-SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$SCRIPT_START_TIME))
-echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+end_script_time
 ",
             "label_key": "COMMAND_KEY",
             "desc_key": "COMMAND_DESC"
