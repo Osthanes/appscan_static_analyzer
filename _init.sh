@@ -223,7 +223,7 @@ fi
 cur_dir=`pwd`
 cd ${EXT_DIR}
 wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
-unzip -o -qq SAClientUtil.zip
+unzip -o -qq SAClientUtil.zip &>/dev/null
 if [ $? -eq 9 ]; then
     debugme echo "Unable to download SAClient, using local copy"
     unzip -o -qq SAClientLocal.zip
