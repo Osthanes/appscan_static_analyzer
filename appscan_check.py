@@ -674,8 +674,8 @@ def waitforscans (joblist):
                         if dash != None:
                             print LABEL_GREEN + STARS
                             print "Analysis successful for job \"" + name + "\""
-                            print "See current state and output at:  " + dash
-                            print STARS + LABEL_NO_COLOR
+                            print "See current state and output at: " + LABEL_COLOR + " " + dash
+                            print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
                         print "Analysis unsuccessful"
 
