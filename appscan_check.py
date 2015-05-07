@@ -22,6 +22,13 @@ import sys
 import time
 from subprocess import call, Popen, PIPE
 
+# ascii color codes for output
+LABEL_GREEN='\e[0;32m'
+LABEL_RED='\e[0;31m'
+LABEL_COLOR='\e[0;33m'
+LABEL_NO_COLOR='\e[0m'
+STARS="************************************************************"
+
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
 DEFAULT_SERVICE_PLAN="free"
@@ -34,16 +41,78 @@ def parseArgs ():
     parsedArgs = {}
     parsedArgs['loginonly'] = False
     parsedArgs['cleanup'] = False
-    parsedArgs['createbinding'] = False
     for arg in sys.argv:
         if arg == "--loginonly":
             parsedArgs['loginonly'] = True
         if arg == "--cleanup":
             parsedArgs['cleanup'] = True
-        if arg == "--createbinding":
-            parsedArgs['createbinding'] = True
 
     return parsedArgs
+
+# find the given service in our space, get its service name, or None
+# if it's not there yet
+def findServiceNameInSpace (service):
+    command = "cf services"
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        print "Unable to lookup services, error was: " + out
+        return None
+
+    foundHeader = False
+    serviceStart = -1
+    serviceEnd = -1
+    serviceName = None
+    for line in out.splitlines():
+        if (foundHeader == False) and (line.startswith("name")):
+            # this is the header bar, find out the spacing to parse later
+            # header is of the format:
+            #name          service      plan   bound apps    last operation
+            # and the spacing is maintained for following lines
+            serviceStart = line.find("service")
+            serviceEnd = line.find("plan")-1
+            foundHeader = True
+        elif foundHeader:
+            # have found the headers, looking for our service
+            if service in line:
+                # maybe found it, double check by making
+                # sure the service is in the right place,
+                # assuming we can check it
+                if (serviceStart > 0) and (serviceEnd > 0):
+                    if service in line[serviceStart:serviceEnd]:
+                        # this is the correct line - find the bound app(s)
+                        # if there are any
+                        serviceName = line[:serviceStart]
+                        serviceName = serviceName.strip()
+        else:
+            continue
+
+    return serviceName
+
+# find a service in our space, and if it's there, get the dashboard
+# url for user info on it
+def findServiceDashboard (service=DEFAULT_SERVICE):
+
+    serviceName = findServiceNameInSpace(service)
+    if serviceName == None:
+        return None
+
+    command = "cf service \"" + serviceName + "\""
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+
+    if proc.returncode != 0:
+        return None
+
+    serviceURL = None
+    for line in out.splitlines():
+        if line.startswith("Dashboard: "):
+            serviceURL = line[11:]
+        else:
+            continue
+
+    return serviceURL
 
 # search cf, find an app in our space bound to the given service, and return
 # the app name if found, or None if not
@@ -153,40 +222,7 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
         return None
 
     # look to see if we have the service in our space
-    proc = Popen(["cf services"], shell=True, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate();
-
-    if proc.returncode != 0:
-        print "Unable to lookup services, error was: " + out
-        return None
-
-    foundHeader = False
-    serviceStart = -1
-    serviceEnd = -1
-    serviceName = None
-    for line in out.splitlines():
-        if (foundHeader == False) and (line.startswith("name")):
-            # this is the header bar, find out the spacing to parse later
-            # header is of the format:
-            #name          service      plan   bound apps    last operation
-            # and the spacing is maintained for following lines
-            serviceStart = line.find("service")
-            serviceEnd = line.find("plan")-1
-            foundHeader = True
-        elif foundHeader:
-            # have found the headers, looking for our service
-            if service in line:
-                # maybe found it, double check by making
-                # sure the service is in the right place,
-                # assuming we can check it
-                if (serviceStart > 0) and (serviceEnd > 0):
-                    if service in line[serviceStart:serviceEnd]:
-                        # this is the correct line - find the bound app(s)
-                        # if there are any
-                        serviceName = line[:serviceStart]
-                        serviceName = serviceName.strip()
-        else:
-            continue
+    serviceName = findServiceNameInSpace(service)
 
     # if we don't have the service name, means the tile isn't created in our space, so go
     # load it into our space if possible
@@ -449,7 +485,7 @@ def getStateSuccessful (state):
         2 : False,
         3 : True,
         4 : False,
-        5 : False,
+        5 : True,
         6 : True,
         7 : False,
         8 : False,
@@ -621,12 +657,18 @@ def waitforscans (joblist):
                     info,low,med,high,prog,name,msg = appscanInfo(jobid)
                     if getStateSuccessful(state):
                         print "Analysis successful (" + name + ")"
-                        print "\tInfo Issues   : " + str(info)
-                        print "\tLow Issues    : " + str(low)
-                        print "\tMedium Issues : " + str(med)
-                        print "\tHigh Issues   : " + str(high)
-                        print "\tOther Message : " + msg
-                        appscanGetResult(jobid)
+                        #print "\tInfo Issues   : " + str(info)
+                        #print "\tLow Issues    : " + str(low)
+                        #print "\tMedium Issues : " + str(med)
+                        #print "\tHigh Issues   : " + str(high)
+                        #print "\tOther Message : " + msg
+                        #appscanGetResult(jobid)
+                        dash = findServiceDashboard(STATIC_ANALYSIS_SERVICE)
+                        if dash != None:
+                            print LABEL_GREEN + STARS
+                            print "Analysis successful for job \"" + name + "\""
+                            print "See current state and output at " + dash
+                            print STARS + LABEL_NO_COLOR
                     else: 
                         print "Analysis unsuccessful"
 
