@@ -199,11 +199,33 @@ fi
 ###############
 # setup appscan
 ###############
+# appscan has different targets as well for bluemix staging vs prod
+if [ -n "$BLUEMIX_TARGET" ]; then
+    if [ "$BLUEMIX_TARGET" == "staging" ]; then 
+        # staging
+        export APPSCAN_ENV=https://appscan-test.ibmcloud.com
+        export APPSCAN_DOMAIN=https://appscan-test.ibmcloud.com
+    elif [ "$BLUEMIX_TARGET" == "prod" ]; then 
+        # prod
+        export APPSCAN_ENV=https://appscan.ibmcloud.com
+        export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+    else 
+        # unknown, setup for prod
+        export APPSCAN_ENV=https://appscan.ibmcloud.com
+        export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+    fi 
+else 
+    # none set, set for prod
+    export APPSCAN_ENV=https://appscan.ibmcloud.com
+    export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+fi
+# fetch the current version of utils
 cur_dir=`pwd`
 cd ${EXT_DIR}
-wget https://appscan.ibmcloud.com/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
+wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
 unzip -o -qq SAClientUtil.zip
 if [ $? -eq 9 ]; then
+    debugme echo "Unable to download SAClient, using local copy"
     unzip -o -qq SAClientLocal.zip
 fi
 cd `ls -d SAClient*/`
@@ -211,7 +233,6 @@ export APPSCAN_INSTALL_DIR=`pwd`
 cd $cur_dir
 export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$APPSCAN_NSTALL_DIR/bin:$LD_LIBRARY_PATH
-export APPSCAN_ENV=https://appscan.ibmcloud.com
 debugme appscan.sh version
 
 echo -e "${label_color}Initialization complete${no_color}"
