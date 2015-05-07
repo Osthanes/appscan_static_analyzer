@@ -41,11 +41,18 @@ def parseArgs ():
     parsedArgs = {}
     parsedArgs['loginonly'] = False
     parsedArgs['cleanup'] = False
+    parsedArgs['checkstate'] = False
     for arg in sys.argv:
         if arg == "--loginonly":
+            # only login, no scanning or submission
             parsedArgs['loginonly'] = True
         if arg == "--cleanup":
+            # cleanup/cancel all complete jobs, and delete irx files
             parsedArgs['cleanup'] = True
+        if arg == "--checkstate":
+            # just check state of existing jobs, don't scan or submit
+            # any new ones
+            parsedArgs['checkstate'] = True
 
     return parsedArgs
 
@@ -562,9 +569,14 @@ def appscanInfo (jobid):
     if jobid == None:
         return
 
-    proc = Popen(["appscan.sh info -i " + str(jobid)], 
-                      shell=True, stdout=PIPE, stderr=PIPE)
+    command = "appscan.sh info -i " + str(jobid)
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
+
+    if os.environ.get('DEBUG'):
+        print "command " + command + " had rc " + str(proc.returncode)
+        print "/t out: " + out
+        print "/t err: " + err
 
     Progress = 100
     NInfo = 0
@@ -583,53 +595,53 @@ def appscanInfo (jobid):
                 except ValueError:
                     NLow = 0
 
-            elif "NMediumIssues=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    try:
-                        NMed = int(tmpstr)
-                    except ValueError:
-                        NMed = 0
+        elif "NMediumIssues=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                try:
+                    NMed = int(tmpstr)
+                except ValueError:
+                    NMed = 0
 
-            elif "NHighIssues=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    try:
-                        NHigh = int(tmpstr)
-                    except ValueError:
-                        NHigh = 0
+        elif "NHighIssues=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                try:
+                    NHigh = int(tmpstr)
+                except ValueError:
+                    NHigh = 0
 
-            elif "NInfoIssues=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    try:
-                        NInfo = int(tmpstr)
-                    except ValueError:
-                        NInfo = 0
+        elif "NInfoIssues=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                try:
+                    NInfo = int(tmpstr)
+                except ValueError:
+                    NInfo = 0
 
-            elif "Progress=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    try:
-                        Progress = int(tmpstr)
-                    except ValueError:
-                        Progress = 0
+        elif "Progress=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                try:
+                    Progress = int(tmpstr)
+                except ValueError:
+                    Progress = 0
 
-            elif "Name=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    jobName = tmpstr
+        elif "Name=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                jobName = tmpstr
 
-            elif "UserMessage=" in line:
-                # number of medium severity issues found in the scan
-                tmpstr = parseKeyEqVal(line)
-                if tmpstr != None:
-                    userMsg = tmpstr
+        elif "UserMessage=" in line:
+            # number of medium severity issues found in the scan
+            tmpstr = parseKeyEqVal(line)
+            if tmpstr != None:
+                userMsg = tmpstr
 
     return NInfo, NLow, NMed, NHigh, Progress, jobName, userMsg
 
@@ -667,7 +679,7 @@ def waitforscans (joblist):
                         if dash != None:
                             print LABEL_GREEN + STARS
                             print "Analysis successful for job \"" + name + "\""
-                            print "See current state and output at <a href=\"" + dash + "\">" + dash + "</a>"
+                            print "See current state and output at:  " + dash
                             print STARS + LABEL_NO_COLOR
                     else: 
                         print "Analysis unsuccessful"
@@ -696,14 +708,19 @@ try:
         print "LoginOnly set, login complete, exiting"
         sys.exit(0)
 
-    print "Scanning for code submission"
-    sys.stdout.flush()
-    files_to_submit = appscanPrepare()
-    print "Submitting scans for analysis"
-    sys.stdout.flush()
-    joblist = appscanSubmit(files_to_submit)
-    print "Waiting for analysis to complete"
-    sys.stdout.flush()
+    # if checkstate, don't really do a scan, just check state of current outstanding ones
+    if parsedArgs['checkstate']:
+        joblist = appscanList()
+    else:
+        print "Scanning for code submission"
+        sys.stdout.flush()
+        files_to_submit = appscanPrepare()
+        print "Submitting scans for analysis"
+        sys.stdout.flush()
+        joblist = appscanSubmit(files_to_submit)
+        print "Waiting for analysis to complete"
+        sys.stdout.flush()
+
     waitforscans(joblist)
 
     if parsedArgs['cleanup']:

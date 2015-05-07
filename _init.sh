@@ -48,10 +48,8 @@ fi
 # For deployers this information is stored in the $BUILD_SELECTOR variable and can be pulled out
 if [ -z "$APPLICATION_VERSION" ]; then
     export SELECTED_BUILD=$(grep -Eo '[0-9]{1,100}' <<< "${BUILD_SELECTOR}")
-    if [ -z $SELECTED_BUILD ]
-    then 
-        if [ -z $BUILD_NUMBER ]
-        then 
+    if [ -z $SELECTED_BUILD ]; then 
+        if [ -z $BUILD_NUMBER ]; then 
             export APPLICATION_VERSION=$(date +%s)
         else 
             export APPLICATION_VERSION=$BUILD_NUMBER    
