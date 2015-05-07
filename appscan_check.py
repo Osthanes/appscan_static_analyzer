@@ -23,11 +23,11 @@ import time
 from subprocess import call, Popen, PIPE
 
 # ascii color codes for output
-LABEL_GREEN='\e[0;32m'
-LABEL_RED='\e[0;31m'
-LABEL_COLOR='\e[0;33m'
-LABEL_NO_COLOR='\e[0m'
-STARS="************************************************************"
+LABEL_GREEN='\033[0;32m'
+LABEL_RED='\033[0;31m'
+LABEL_COLOR='\033[0;33m'
+LABEL_NO_COLOR='\033[0m'
+STARS="**********************************************************************"
 
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
@@ -667,7 +667,7 @@ def waitforscans (joblist):
                         if dash != None:
                             print LABEL_GREEN + STARS
                             print "Analysis successful for job \"" + name + "\""
-                            print "See current state and output at " + dash
+                            print "See current state and output at <a href=\"" + dash + "\">" + dash + "</a>"
                             print STARS + LABEL_NO_COLOR
                     else: 
                         print "Analysis unsuccessful"
