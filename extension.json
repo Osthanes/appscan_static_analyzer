@@ -32,6 +32,7 @@
             "type": "TextArea",
             "required": "true",
             "default_value" : "#!/bin/bash
+SCRIPT_START_TIME=$(date +\"%s\")
 # The following colors have been defined to help with presentation of logs: green, red, label_color, no_color.  
 echo -e \"${label_color}Starting build script${no_color}\"
 
@@ -64,9 +65,9 @@ fi
 ##############################
 # rough build time, this run
 ##############################
-BUILD_END_TIME=$(date +\"%s\")
-BUILD_EST_TIME=$(($BUILD_END_TIME-$BUILD_START_TIME))
-echo -e \"Internal build time of `date -u -d @\"$BUILD_EST_TIME\" +\'%-Mm %-Ss\'`\"
+SCRIPT_END_TIME=$(date +\"%s\")
+SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$SCRIPT_START_TIME))
+echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 ",
             "label_key": "COMMAND_KEY",
             "desc_key": "COMMAND_DESC"
@@ -81,12 +82,15 @@ echo -e \"Internal build time of `date -u -d @\"$BUILD_EST_TIME\" +\'%-Mm %-Ss\'
     "execution": {
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
-export BUILD_START_TIME=$(date +\"%s\")
+export INIT_START_TIME=$(date +\"%s\")
 export SUBMISSION_NAME=#SUBMISSION_NAME#
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
 set +x
-set +e 
+set +e
 . $EXT_DIR/_init.sh
+INIT_END_TIME=$(date +\"%s\")
+INIT_EST_TIME=$(($INIT_END_TIME-$INIT_START_TIME))
+echo -e \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 
 /bin/bash -e #COMMAND#"
     }
