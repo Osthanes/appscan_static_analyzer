@@ -16,6 +16,8 @@
 #***************************************************************************
 
 import json
+import logging
+import logging.handlers
 import os
 import os.path
 import sys
@@ -35,6 +37,8 @@ DEFAULT_SERVICE_PLAN="free"
 DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="containerbridge"
+
+Logger=None
 
 # check cli args, set globals appropriately
 def parseArgs ():
@@ -56,6 +60,33 @@ def parseArgs ():
 
     return parsedArgs
 
+# setup logmet logging connection if it's available
+def setupLogging ():
+    logger = logging.getLogger('pipeline')
+    if os.environ.get('DEBUG'):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    # if logmet is enabled, send the log through syslog as well
+    if os.environ.get('LOGMET_LOGGING_ENABLED'):
+        handler = logging.handlers.SysLogHandler(address='/dev/log')
+        logger.addHandler(handler)
+        # don't send debug info through syslog
+        handler.setLevel(logging.INFO)
+
+    # in any case, dump logging to the screen
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    if os.environ.get('DEBUG'):
+        handler.setLevel(logging.DEBUG)
+    else:
+        handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    
+    return logger
+
 # find the given service in our space, get its service name, or None
 # if it's not there yet
 def findServiceNameInSpace (service):
@@ -64,7 +95,7 @@ def findServiceNameInSpace (service):
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        print "Unable to lookup services, error was: " + out
+        Logger.info("Unable to lookup services, error was: " + out)
         return None
 
     foundHeader = False
@@ -172,9 +203,9 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
 
     if os.environ.get('DEBUG'):
         if boundApp == None:
-            print "No existing apps found bound to service \"" + service + "\""
+            Logger.debug("No existing apps found bound to service \"" + service + "\"")
         else:
-            print "Found existing service \"" + boundApp + "\" bound to service \"" + service + "\""
+            Logger.debug("Found existing service \"" + boundApp + "\" bound to service \"" + service + "\"")
 
     return boundApp
 
@@ -182,15 +213,14 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
 def checkAndCreateBridgeApp ():
     # first look to see if the bridge app already exists
     command = "cf apps"
-    if os.environ.get('DEBUG'):
-        print "Executing command \"" + command + "\""
+    Logger.debug("Executing command \"" + command + "\"")
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if os.environ.get('DEBUG'):
-        print "command \"" + command + "\" returned with rc=" + str(proc.returncode)
-        print "\tstdout was " + out
-        print "\tstderr was " + err
+        Logger.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
+        Logger.debug("\tstdout was " + out)
+        Logger.debug("\tstderr was " + err)
 
     if proc.returncode != 0:
         return None
@@ -201,20 +231,19 @@ def checkAndCreateBridgeApp ():
             return True
 
     # our bridge app isn't around, create it
-    print "Bridge app does not exist, attempting to create it"
+    Logger.info("Bridge app does not exist, attempting to create it")
     command = "cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"
-    if os.environ.get('DEBUG'):
-        print "Executing command \"" + command + "\""
+    Logger.debug("Executing command \"" + command + "\"")
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if os.environ.get('DEBUG'):
-        print "command \"" + command + "\" returned with rc=" + str(proc.returncode)
-        print "\tstdout was " + out
-        print "\tstderr was " + err
+        Logger.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
+        Logger.debug("\tstdout was " + out)
+        Logger.debug("\tstderr was " + err)
 
     if proc.returncode != 0:
-        print "Unable to create bridge app, error was: " + out
+        Logger.info("Unable to create bridge app, error was: " + out)
         return False
 
     return True
@@ -234,27 +263,26 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
     # if we don't have the service name, means the tile isn't created in our space, so go
     # load it into our space if possible
     if serviceName == None:
-        print "Service \"" + service + "\" is not loaded in this space, attempting to load it"
+        Logger.info("Service \"" + service + "\" is not loaded in this space, attempting to load it")
         serviceName = DEFAULT_SERVICE_NAME
         command = "cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""
-        if os.environ.get('DEBUG'):
-            print "Executing command \"" + command + "\""
+        Logger.debug("Executing command \"" + command + "\"")
         proc = Popen([command], 
                      shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
 
         if proc.returncode != 0:
-            print "Unable to create service in this space, error was: " + out
+            Logger.info("Unable to create service in this space, error was: " + out)
             return None
 
     # now try to bind the service to our bridge app
-    print "Binding service \"" + serviceName + "\" to app \"" + DEFAULT_BRIDGEAPP_NAME + "\""
+    Logger.info("Binding service \"" + serviceName + "\" to app \"" + DEFAULT_BRIDGEAPP_NAME + "\"")
     proc = Popen(["cf bind-service " + DEFAULT_BRIDGEAPP_NAME + " \"" + serviceName + "\""], 
                  shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        print "Unable to bind service to the bridge app, error was: " + out
+        Logger.info("Unable to bind service to the bridge app, error was: " + out)
         return None
 
     return DEFAULT_BRIDGEAPP_NAME
@@ -375,9 +403,11 @@ def appscanPrepare ():
     # which files are new?
     newIrxFiles = set(newIrxFiles).difference(oldIrxFiles)
 
-    print "Generated scans as file(s):"
+    logMessage = "Generated scans as file(s):"
     for file in newIrxFiles:
-        print "\t" + file
+        logMessage = logMessage + "\n\t" + file
+
+    Logger.info(logMessage)
 
     return newIrxFiles
 
@@ -416,7 +446,7 @@ def appscanSubmit (filelist):
             elif line:
                 # done, if line isn't empty, is an id
                 scanlist.append(line)
-                print "Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line
+                Logger.info("Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line)
             else:
                 # empty line, skip it
                 continue
@@ -659,11 +689,11 @@ def waitforscans (joblist):
         try:
             while True:
                 state = appscanStatus(jobid)
-                print "Job " + str(jobid) + " in state " + getStateName(state)
+                Logger.info("Job " + str(jobid) + " in state " + getStateName(state))
                 if getStateCompleted(state):
                     info,low,med,high,prog,name,msg = appscanInfo(jobid)
                     if getStateSuccessful(state):
-                        print "Analysis successful (" + name + ")"
+                        Logger.info("Analysis successful (" + name + ")")
                         #print "\tInfo Issues   : " + str(info)
                         #print "\tLow Issues    : " + str(low)
                         #print "\tMedium Issues : " + str(med)
@@ -677,7 +707,7 @@ def waitforscans (joblist):
                             print "See current state and output at: " + LABEL_COLOR + " " + dash
                             print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
-                        print "Analysis unsuccessful"
+                        Logger.info("Analysis unsuccessful (" + name + ")")
 
                     break
                 else:
@@ -690,31 +720,27 @@ def waitforscans (joblist):
 # begin main execution sequence
 
 try:
+    Logger = setupLogging()
     parsedArgs = parseArgs()
-    print "Getting credentials for Static Analysis service"
-    sys.stdout.flush()
+    Logger.info("Getting credentials for Static Analysis service")
     userid, password = getCredentialsFromBoundApp(service=STATIC_ANALYSIS_SERVICE)
-    print "Connecting to Static Analysis service"
-    sys.stdout.flush()
+    Logger.info("Connecting to Static Analysis service")
     appscanLogin(userid,password)
 
     # allow testing connection without full job scan and submission
     if parsedArgs['loginonly']:
-        print "LoginOnly set, login complete, exiting"
+        Logger.info("LoginOnly set, login complete, exiting")
         sys.exit(0)
 
     # if checkstate, don't really do a scan, just check state of current outstanding ones
     if parsedArgs['checkstate']:
         joblist = appscanList()
     else:
-        print "Scanning for code submission"
-        sys.stdout.flush()
+        Logger.info("Scanning for code submission")
         files_to_submit = appscanPrepare()
-        print "Submitting scans for analysis"
-        sys.stdout.flush()
+        Logger.info("Submitting scans for analysis")
         joblist = appscanSubmit(files_to_submit)
-        print "Waiting for analysis to complete"
-        sys.stdout.flush()
+        Logger.info("Waiting for analysis to complete")
 
     waitforscans(joblist)
 
@@ -730,6 +756,6 @@ try:
             if os.path.isfile(file+".log"):
                 os.remove(file+".log")
 except Exception, e:
-    print e
+    Logger.warning("Exception received", exc_info=e)
     sys.exit(1)
 
