@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #********************************************************************************
-# Copyright 2014 IBM
+# Copyright 2015 IBM
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -193,6 +193,16 @@ if [ $RESULT -eq 1 ]; then
 else 
     echo -e "${green}Successfully logged into IBM Bluemix${no_color}"
 fi 
+
+# get the extensions utilities
+pushd . 
+cd $EXT_DIR 
+git clone https://github.com/Osthanes/utilities.git utilities
+popd
+# enable logging to logmet
+source $EXT_DIR/utilities/logging_utils.sh
+setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}" "${BLUEMIX_SPACE}" "${BLUEMIX_ORG}" "${BLUEMIX_TARGET}"
+
 
 ###############
 # setup appscan
