@@ -26,58 +26,6 @@
             "required": "false",
             "label_key": "SUBMISSION_NAME_KEY",
             "desc_key": "SUBMISSION_NAME_DESC"
-        },
-        {
-            "name": "COMMAND",
-            "type": "TextArea",
-            "required": "true",
-            "default_value" : "#!/bin/bash
-SCRIPT_START_TIME=$(date +\"%s\")
-# The following colors have been defined to help with presentation of logs: green, red, label_color, no_color.  
-echo -e \"${label_color}Starting build script${no_color}\"
-
-# The CloudFoundry CLI (cf), Git client (git), IDS Inventory CLI (ids-inv), Python 2.7.3 (python), and Appscan (appscan.sh) have been installed.
-# Based on the organization and space selected in the Job, credentials are in place for IBM Bluemix 
-
-# helper function to print the end time for this script
-end_script_time() {
-    SCRIPT_END_TIME=$(date +\"%s\")
-    SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$SCRIPT_START_TIME))
-    echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
-}
-
-############################################
-# call python script to run appscan calls  #
-############################################
-
-if [ -f ${EXT_DIR}/appscan_check.py ]; then 
-    ${EXT_DIR}/appscan_check.py
-    RESULT=$?
-
-    if [ $RESULT -ne 0 ]; then
-        echo -e \"${red}Error running appscan ${no_color}\"
-        end_script_time
-        exit 1
-    else
-        echo -e \"${green}Application scan was successful ${no_color}\"
-    fi  
-else 
-    echo -e \"${red}Appscan helper script not available, failed.${no_color}\"
-    end_script_time
-    exit 1
-fi  
-
-########################################################################################
-# Copy any artifacts that will be needed for deployment and testing to $ARCHIVE_DIR    #
-########################################################################################
-
-##############################
-# rough build time, this run
-##############################
-end_script_time
-",
-            "label_key": "COMMAND_KEY",
-            "desc_key": "COMMAND_DESC"
         }
     ],
     "outputs": [
@@ -105,8 +53,33 @@ fi
 INIT_END_TIME=$(date +\"%s\")
 INIT_EST_TIME=$(($INIT_END_TIME-$INIT_START_TIME))
 echo -e \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+echo -e \"${label_color}Starting build script${no_color}\"
 
-/bin/bash -e #COMMAND#"
+# helper function to print the end time for this script
+end_script_time() {
+    SCRIPT_END_TIME=$(date +\"%s\")
+    SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$INIT_END_TIME))
+    echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+}
+
+# run the python appscan checker, dump results on output
+if [ -f ${EXT_DIR}/appscan_check.py ]; then 
+    ${EXT_DIR}/appscan_check.py
+    RESULT=$?
+
+    if [ $RESULT -ne 0 ]; then
+        echo -e \"${red}Error running appscan ${no_color}\"
+        end_script_time
+        exit 1
+    else
+        echo -e \"${green}Application scan was successful ${no_color}\"
+    fi  
+else 
+    echo -e \"${red}Appscan helper script not available, failed.${no_color}\"
+    end_script_time
+    exit 1
+fi  
+"
     }
     },
     "project": "https://hub.jazz.net/project/alchemy/Alchemy-Ostanes",
