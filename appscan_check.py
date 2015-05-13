@@ -385,13 +385,22 @@ def appscanPrepare ():
         if file.endswith(".irx"):
             oldIrxFiles.append(file)
 
+    # clean up the appscan client log so we can dump it on error if needed
+    # and only see the error from this call
+    logfileName = None
+    appscanDir = os.environ.get('APPSCAN_INSTALL_DIR')
+    if appscanDir:
+        logfileName = appscanDir+"/logs/client.log"
+        if os.path.isfile( logfileName ):
+            os.remove( logfileName ):
+
     proc = Popen(["appscan.sh prepare"], 
                  shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if not "IRX file generation successful" in out:
         if os.environ.get('DEBUG'):
-            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log | tail -n 10"], shell=True)
+            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
         raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
                         err)
 
@@ -594,7 +603,7 @@ def parseKeyEqVal (line):
 #Result=1
 #
 # parse it and return useful parts.  in particular, returns
-# NInfo, NLow, NMedium, NHigh, userMessage
+# NInfo, NLow, NMedium, NHigh, Progress, jobName, userMessage
 def appscanInfo (jobid):
     if jobid == None:
         return
@@ -704,10 +713,10 @@ def waitforscans (joblist):
                         if dash != None:
                             print LABEL_GREEN + STARS
                             print "Analysis successful for job \"" + name + "\""
-                            print "See current state and output at: " + LABEL_COLOR + " " + dash
+                            print "See current state and results at: " + LABEL_COLOR + " " + dash
                             print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
-                        Logger.info("Analysis unsuccessful (" + name + ")")
+                        Logger.info("Analysis unsuccessful (" + name + ") with message \"" + msg + "\"")
 
                     break
                 else:
