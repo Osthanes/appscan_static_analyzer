@@ -110,7 +110,7 @@ cf help &> /dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
     echo "Installing Cloud Foundry CLI"
-    pushd . 
+    pushd . >/dev/null
     cd $EXT_DIR 
     curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
     gunzip cf-linux-amd64.tgz &> /dev/null
@@ -121,7 +121,7 @@ if [ $RESULT -ne 0 ]; then
         echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
         exit 1
     fi  
-    popd
+    popd >/dev/null
     echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
 fi 
 
@@ -195,10 +195,10 @@ else
 fi 
 
 # get the extensions utilities
-pushd . 
+pushd . >/dev/null
 cd $EXT_DIR 
 git clone https://github.com/Osthanes/utilities.git utilities
-popd
+popd >/dev/null
 # enable logging to logmet
 source $EXT_DIR/utilities/logging_utils.sh
 setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}" "${BLUEMIX_SPACE}" "${BLUEMIX_ORG}" "${BLUEMIX_TARGET}"
