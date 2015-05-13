@@ -399,10 +399,15 @@ def appscanPrepare ():
     out, err = proc.communicate();
 
     if not "IRX file generation successful" in out:
-        if os.environ.get('DEBUG'):
-            call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
-        raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
-                        err)
+        if "An IRX file was created, but it may be incomplete" in err:
+            # some jar/war/ear files were not scannable, but some were.
+            # attempt the submission
+            Logger.warning("Not all files could be scanned, but the scan has been submitted for those which were")
+        else:
+            if os.environ.get('DEBUG'):
+                call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
+            raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
+                            err)
 
     # what files are there now?
     newIrxFiles = []
