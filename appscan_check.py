@@ -392,7 +392,7 @@ def appscanPrepare ():
     if appscanDir:
         logfileName = appscanDir+"/logs/client.log"
         if os.path.isfile( logfileName ):
-            os.remove( logfileName ):
+            os.remove( logfileName )
 
     proc = Popen(["appscan.sh prepare"], 
                  shell=True, stdout=PIPE, stderr=PIPE)
