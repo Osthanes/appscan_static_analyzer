@@ -54,13 +54,13 @@
     "execution": {
         "type": "JenkinsDocker",
         "shell": "#!/bin/bash
+set +x
+set +e
 export INIT_START_TIME=$(date +\"%s\")
 export SUBMISSION_NAME=#SUBMISSION_NAME#
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
 export REQUIRE_SUCCESS=#REQUIRE_SUCCESS#
 export WAIT_TIME=#WAIT_TIME#
-set +x
-set +e
 # OSSC line
 dpkg -l | grep '^ii' > $EXT_DIR/pkglist
 . $EXT_DIR/_init.sh
@@ -82,7 +82,7 @@ end_script_time() {
 }
 
 # helper setup to allow check for always succeed
-TRUESTR=\"true\"
+export TRUESTR=\"true\"
 if [ \"${REQUIRE_SUCCESS}x\" == \"x\" ]; then
     REQUIRE_SUCCESS=\"false\"
 fi

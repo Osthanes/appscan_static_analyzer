@@ -78,7 +78,12 @@ echo "APPLICATION_VERSION: $APPLICATION_VERSION"
 
 if [ -z $SUBMISSION_NAME ]; then 
     echo -e "${red}Please set SUBMISSION_NAME in the environment to desired name ${no_color}"
-    exit 1
+    if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+        exit 1
+    else
+        # if dont block pipeline, always succeed
+        exit 0
+    fi
 fi 
 
 ################################
@@ -86,7 +91,12 @@ fi
 ################################
 if [ -z $WORKSPACE ]; then 
     echo -e "${red}Please set WORKSPACE in the environment${no_color}"
-    exit 1
+    if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+        exit 1
+    else
+        # if dont block pipeline, always succeed
+        exit 0
+    fi
 fi 
 
 if [ -z $ARCHIVE_DIR ]; then 
@@ -119,7 +129,12 @@ if [ $RESULT -ne 0 ]; then
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
         echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
-        exit 1
+        if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+            exit 1
+        else
+            # if dont block pipeline, always succeed
+            exit 0
+        fi
     fi  
     popd >/dev/null
     echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
@@ -151,11 +166,21 @@ if [ -n "$BLUEMIX_USER" ] || [ ! -f ~/.cf/config.json ]; then
     # Get the Bluemix user and password information 
     if [ -z "$BLUEMIX_USER" ]; then 
         echo -e "${red} Please set BLUEMIX_USER on environment ${no_color} "
-        exit 1
+        if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+            exit 1
+        else
+            # if dont block pipeline, always succeed
+            exit 0
+        fi
     fi 
     if [ -z "$BLUEMIX_PASSWORD" ]; then 
         echo -e "${red} Please set BLUEMIX_PASSWORD as an environment property environment ${no_color} "
-        exit 1 
+        if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+            exit 1
+        else
+            # if dont block pipeline, always succeed
+            exit 0
+        fi
     fi 
     if [ -z "$BLUEMIX_ORG" ]; then 
         export BLUEMIX_ORG=$BLUEMIX_USER
@@ -189,7 +214,12 @@ fi
 # check login result 
 if [ $RESULT -eq 1 ]; then
     echo -e "${red}Failed to login to IBM Bluemix${no_color}"
-    exit $RESULT
+    if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
+        exit $RESULT
+    else
+        # if dont block pipeline, always succeed
+        exit 0
+    fi
 else 
     echo -e "${green}Successfully logged into IBM Bluemix${no_color}"
 fi 
