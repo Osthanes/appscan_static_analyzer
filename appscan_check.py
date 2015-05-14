@@ -410,6 +410,22 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
 
     return userid, password
 
+# create a template for a current scan.  this will be in the format
+# "<scanname>-<version>-" where scanname comes from env var 
+# 'SUBMISSION_NAME', and version comes from env var 'APPLICATION_VERSION'
+def get_scanname_template ():
+    # check the env for name of the scan, else use default
+    if os.environ.get('SUBMISSION_NAME'):
+        scanname=os.environ.get('SUBMISSION_NAME')
+    else:
+        scanname=DEFAULT_SCANNAME
+
+    # if we have an application version, append it to the scanname
+    if os.environ.get('APPLICATION_VERSION'):
+        scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
+
+    return scanname
+
 # given userid and password, attempt to authenticate to appscan for
 # future calls
 def appscan_login (userid, password):
@@ -476,20 +492,10 @@ def appscan_submit (filelist):
     if filelist==None:
         raise Exception("No files to analyze")
 
-    # check the env for name of the scan, else use default
-    if os.environ.get('SUBMISSION_NAME'):
-        scanname=os.environ.get('SUBMISSION_NAME')
-    else:
-        scanname=DEFAULT_SCANNAME
-
-    # if we have an application version, append it to the scanname
-    if os.environ.get('APPLICATION_VERSION'):
-        scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
-
     scanlist = []
     index = 0
     for filename in filelist:
-        submit_scanname = scanname + "-" + str(index)
+        submit_scanname = get_scanname_template() + str(index)
         proc = Popen(["appscan.sh queue_analysis -f " + filename +
                       " -n " + submit_scanname], 
                           shell=True, stdout=PIPE, stderr=PIPE)
@@ -742,6 +748,31 @@ def appscan_get_result (jobid):
     print "Out = " + out
     print "Err = " + err
 
+# if the job we would run is already up (and either pending or complete),
+# we just want to get state (and wait for it if needed), not create a whole
+# new submission.  for the key, we use the job name, compared to the
+# name template as per get_scanname_template()
+def check_for_existing_job ():
+    alljobs = appscan_list()
+    if alljobs == None:
+        # no jobs, ours can't be there
+        return None
+
+    # get the name we're looking for
+    job_name = get_scanname_template()
+    joblist = []
+    found = False
+    for jobid in alljobs:
+        info,low,med,high,prog,name,msg = appscan_info(jobid)
+        if (name != None) and (name.startswith(job_name)):
+            joblist.append(jobid)
+            found = True
+
+    if found:
+        return joblist
+    else:
+        return None
+
 # wait for a given set of scans to complete and, if successful,
 # download the results
 def wait_for_scans (joblist):
@@ -820,11 +851,18 @@ try:
         WAIT_TIME = 0
         joblist = appscan_list()
     else:
-        LOGGER.info("Scanning for code submission")
-        files_to_submit = appscan_prepare()
-        LOGGER.info("Submitting scans for analysis")
-        joblist = appscan_submit(files_to_submit)
-        LOGGER.info("Waiting for analysis to complete")
+        # if the job we would run is already up (and either pending or complete),
+        # we just want to get state (and wait for it if needed), not create a whole
+        # new submission
+        joblist = check_for_existing_job()
+        if joblist == None:
+            LOGGER.info("Scanning for code submission")
+            files_to_submit = appscan_prepare()
+            LOGGER.info("Submitting scans for analysis")
+            joblist = appscan_submit(files_to_submit)
+            LOGGER.info("Waiting for analysis to complete")
+        else:
+            LOGGER.info("Existing job found, connecting")
 
     # check on pending jobs, waiting if appropriate
     all_jobs_complete = wait_for_scans(joblist)
