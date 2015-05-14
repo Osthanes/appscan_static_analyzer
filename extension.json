@@ -29,14 +29,6 @@
             "desc_key": "SUBMISSION_NAME_DESC"
         },
         {
-            "name": "REQUIRE_SUCCESS",
-            "type": "Text",
-            "required": "true",
-            "default_value": "true",
-            "label_key": "REQUIRE_SUCCESS_KEY",
-            "desc_key": "REQUIRE_SUCCESS_DESC"
-        },
-        {
             "name": "WAIT_TIME",
             "type": "Text",
             "required": "false",
@@ -59,7 +51,6 @@ set +e
 export INIT_START_TIME=$(date +\"%s\")
 export SUBMISSION_NAME=#SUBMISSION_NAME#
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
-export REQUIRE_SUCCESS=#REQUIRE_SUCCESS#
 export WAIT_TIME=#WAIT_TIME#
 # OSSC line
 dpkg -l | grep '^ii' > $EXT_DIR/pkglist
@@ -81,12 +72,6 @@ end_script_time() {
     echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 }
 
-# helper setup to allow check for always succeed
-export TRUESTR=\"true\"
-if [ \"${REQUIRE_SUCCESS}x\" == \"x\" ]; then
-    REQUIRE_SUCCESS=\"false\"
-fi
-
 # run the python appscan checker, dump results on output
 if [ -f ${EXT_DIR}/appscan_check.py ]; then 
     ${EXT_DIR}/appscan_check.py
@@ -95,24 +80,14 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     if [ $RESULT -ne 0 ]; then
         echo -e \"${red}Error running appscan ${no_color}\"
         end_script_time
-        if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
-            exit 1
-        else
-            # if dont block pipeline, always succeed
-            exit 0
-        fi
+        exit 1
     else
         echo -e \"${green}Application scan was successful ${no_color}\"
     fi  
 else 
     echo -e \"${red}Appscan helper script not available, failed.${no_color}\"
     end_script_time
-    if [ \"${REQUIRE_SUCCESS,,}\" = \"${TRUESTR,,}\" ]; then
-        exit 1
-    else
-        # if dont block pipeline, always succeed
-        exit 0
-    fi
+    exit 1
 fi  
 "
     }

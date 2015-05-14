@@ -311,7 +311,7 @@ def create_bound_app_for_service (service=DEFAULT_SERVICE, plan=DEFAULT_SERVICE_
     # load it into our space if possible
     if serviceName == None:
         LOGGER.info("Service \"" + service + "\" is not loaded in this space, attempting to load it")
-        serviceName = DEFAULT_SERVICE_NAME
+        serviceName = service
         command = "cf create-service \"" + service + "\" \"" + plan + "\" \"" + serviceName + "\""
         LOGGER.debug("Executing command \"" + command + "\"")
         proc = Popen([command], 
@@ -347,7 +347,7 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None, c
         if (setupSpace != None) and (setupSpace.lower() == "true"):
             binding_app = create_bound_app_for_service(service=service, plan=DEFAULT_SERVICE_PLAN)
         else:
-            raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically")
+            raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  " + LABEL_COLOR + "Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically" + LABEL_NO_COLOR)
 
     # if STILL no binding app, we're out of options, just fail out
     if binding_app == None:
