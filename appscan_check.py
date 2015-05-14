@@ -22,6 +22,7 @@ import os
 import os.path
 import sys
 import time
+import timeit
 from subprocess import call, Popen, PIPE
 
 # ascii color codes for output
@@ -37,33 +38,43 @@ DEFAULT_SERVICE_PLAN="free"
 DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="containerbridge"
+DEBUG=os.environ.get('DEBUG')
+# time to sleep between checks when waiting on pending jobs, in seconds
+SLEEP_TIME=15
 
-Logger=None
+SCRIPT_START_TIME = timeit.default_timer()
+LOGGER = None
+WAIT_TIME = 0
 
 # check cli args, set globals appropriately
-def parseArgs ():
-    parsedArgs = {}
-    parsedArgs['loginonly'] = False
-    parsedArgs['cleanup'] = False
-    parsedArgs['checkstate'] = False
+def parse_args ():
+    parsed_args = {}
+    parsed_args['loginonly'] = False
+    parsed_args['cleanup'] = False
+    parsed_args['checkstate'] = False
+    parsed_args['debug'] = False
     for arg in sys.argv:
         if arg == "--loginonly":
             # only login, no scanning or submission
-            parsedArgs['loginonly'] = True
+            parsed_args['loginonly'] = True
         if arg == "--cleanup":
             # cleanup/cancel all complete jobs, and delete irx files
-            parsedArgs['cleanup'] = True
+            parsed_args['cleanup'] = True
         if arg == "--checkstate":
             # just check state of existing jobs, don't scan or submit
             # any new ones
-            parsedArgs['checkstate'] = True
+            parsed_args['checkstate'] = True
+        if arg == "debug":
+            # enable debug mode, can also be done with DEBUG env var
+            parsed_args['debug'] = True
+            DEBUG = "1"
 
-    return parsedArgs
+    return parsed_args
 
 # setup logmet logging connection if it's available
-def setupLogging ():
+def setup_logging ():
     logger = logging.getLogger('pipeline')
-    if os.environ.get('DEBUG'):
+    if DEBUG:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -79,7 +90,7 @@ def setupLogging ():
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
-    if os.environ.get('DEBUG'):
+    if DEBUG:
         handler.setLevel(logging.DEBUG)
     else:
         handler.setLevel(logging.INFO)
@@ -87,15 +98,51 @@ def setupLogging ():
     
     return logger
 
+# return the remaining time to wait
+# first time, will prime from env var and subtract init script time 
+#
+# return is the expected max time left in seconds we're allowed to wait
+# for pending jobs to complete
+def get_remaining_wait_time (first = False):
+    if first:
+        # first time through, set up the var from env
+        try:
+            time_to_wait = int(os.getenv('WAIT_TIME', "5")) * 60
+        except ValueError:
+            time_to_wait = 300
+
+        # and (if not 0) subtract out init time
+        if time_to_wait != 0:
+            try:
+                initTime = int(os.getenv("INT_EST_TIME", "0"))
+            except ValueError:
+                initTime = 0
+
+            time_to_wait -= initTime
+    else:
+        # just get the initial start time
+        time_to_wait = WAIT_TIME
+
+    # if no time to wait, no point subtracting anything
+    if time_to_wait != 0:
+        time_so_far = int(timeit.default_timer() - SCRIPT_START_TIME)
+        time_to_wait -= time_so_far
+
+    # can't wait negative time, fix it
+    if time_to_wait < 0:
+        time_to_wait = 0
+
+    return time_to_wait
+
 # find the given service in our space, get its service name, or None
 # if it's not there yet
-def findServiceNameInSpace (service):
+def find_service_name_in_space (service):
     command = "cf services"
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        Logger.info("Unable to lookup services, error was: " + out)
+        LOGGER.info("Unable to lookup services, error was: " + out)
         return None
 
     foundHeader = False
@@ -130,9 +177,9 @@ def findServiceNameInSpace (service):
 
 # find a service in our space, and if it's there, get the dashboard
 # url for user info on it
-def findServiceDashboard (service=DEFAULT_SERVICE):
+def find_service_dashboard (service=DEFAULT_SERVICE):
 
-    serviceName = findServiceNameInSpace(service)
+    serviceName = find_service_name_in_space(service)
     if serviceName == None:
         return None
 
@@ -154,7 +201,7 @@ def findServiceDashboard (service=DEFAULT_SERVICE):
 
 # search cf, find an app in our space bound to the given service, and return
 # the app name if found, or None if not
-def findBoundAppForService (service=DEFAULT_SERVICE):
+def find_bound_app_for_service (service=DEFAULT_SERVICE):
 
     proc = Popen(["cf services"], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
@@ -201,26 +248,26 @@ def findBoundAppForService (service=DEFAULT_SERVICE):
         if boundApp=="":
             boundApp = None
 
-    if os.environ.get('DEBUG'):
+    if DEBUG:
         if boundApp == None:
-            Logger.debug("No existing apps found bound to service \"" + service + "\"")
+            LOGGER.debug("No existing apps found bound to service \"" + service + "\"")
         else:
-            Logger.debug("Found existing service \"" + boundApp + "\" bound to service \"" + service + "\"")
+            LOGGER.debug("Found existing service \"" + boundApp + "\" bound to service \"" + service + "\"")
 
     return boundApp
 
 # look for our default bridge app.  if it's not there, create it
-def checkAndCreateBridgeApp ():
+def check_and_create_bridge_app ():
     # first look to see if the bridge app already exists
     command = "cf apps"
-    Logger.debug("Executing command \"" + command + "\"")
+    LOGGER.debug("Executing command \"" + command + "\"")
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-    if os.environ.get('DEBUG'):
-        Logger.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
-        Logger.debug("\tstdout was " + out)
-        Logger.debug("\tstderr was " + err)
+    if DEBUG:
+        LOGGER.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
+        LOGGER.debug("\tstdout was " + out)
+        LOGGER.debug("\tstderr was " + err)
 
     if proc.returncode != 0:
         return None
@@ -231,58 +278,57 @@ def checkAndCreateBridgeApp ():
             return True
 
     # our bridge app isn't around, create it
-    Logger.info("Bridge app does not exist, attempting to create it")
+    LOGGER.info("Bridge app does not exist, attempting to create it")
     command = "cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"
-    Logger.debug("Executing command \"" + command + "\"")
+    LOGGER.debug("Executing command \"" + command + "\"")
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-    if os.environ.get('DEBUG'):
-        Logger.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
-        Logger.debug("\tstdout was " + out)
-        Logger.debug("\tstderr was " + err)
+    if DEBUG:
+        LOGGER.debug("command \"" + command + "\" returned with rc=" + str(proc.returncode))
+        LOGGER.debug("\tstdout was " + out)
+        LOGGER.debug("\tstderr was " + err)
 
     if proc.returncode != 0:
-        Logger.info("Unable to create bridge app, error was: " + out)
+        LOGGER.info("Unable to create bridge app, error was: " + out)
         return False
 
     return True
 
-
 # look for our bridge app to bind this service to.  If it's not there,
 # attempt to create it.  Then bind the service to that app.  If it 
 # all works, return that app name as the bound app
-def createBoundAppForService (service=DEFAULT_SERVICE):
+def create_bound_app_for_service (service=DEFAULT_SERVICE):
 
-    if not checkAndCreateBridgeApp():
+    if not check_and_create_bridge_app():
         return None
 
     # look to see if we have the service in our space
-    serviceName = findServiceNameInSpace(service)
+    serviceName = find_service_name_in_space(service)
 
     # if we don't have the service name, means the tile isn't created in our space, so go
     # load it into our space if possible
     if serviceName == None:
-        Logger.info("Service \"" + service + "\" is not loaded in this space, attempting to load it")
+        LOGGER.info("Service \"" + service + "\" is not loaded in this space, attempting to load it")
         serviceName = DEFAULT_SERVICE_NAME
         command = "cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""
-        Logger.debug("Executing command \"" + command + "\"")
+        LOGGER.debug("Executing command \"" + command + "\"")
         proc = Popen([command], 
                      shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
 
         if proc.returncode != 0:
-            Logger.info("Unable to create service in this space, error was: " + out)
+            LOGGER.info("Unable to create service in this space, error was: " + out)
             return None
 
     # now try to bind the service to our bridge app
-    Logger.info("Binding service \"" + serviceName + "\" to app \"" + DEFAULT_BRIDGEAPP_NAME + "\"")
+    LOGGER.info("Binding service \"" + serviceName + "\" to app \"" + DEFAULT_BRIDGEAPP_NAME + "\"")
     proc = Popen(["cf bind-service " + DEFAULT_BRIDGEAPP_NAME + " \"" + serviceName + "\""], 
                  shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
     if proc.returncode != 0:
-        Logger.info("Unable to bind service to the bridge app, error was: " + out)
+        LOGGER.info("Unable to bind service to the bridge app, error was: " + out)
         return None
 
     return DEFAULT_BRIDGEAPP_NAME
@@ -290,15 +336,15 @@ def createBoundAppForService (service=DEFAULT_SERVICE):
 # find given bound app, and look for the passed bound service in cf.  once
 # found in VCAP_SERVICES, look for the credentials setting, and extract
 # userid, password.  Raises Exception on errors
-def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
+def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
     # if no binding app parm passed, go looking to find a bound app for this one
     if binding_app == None:
-        binding_app = findBoundAppForService(service)
+        binding_app = find_bound_app_for_service(service)
     # if still no binding app, and the user agreed, CREATE IT!
     if binding_app == None:
         setupSpace = os.environ.get('SETUP_SERVICE_SPACE')
         if (setupSpace != None) and (setupSpace.lower() == "true"):
-            binding_app = createBoundAppForService(service)
+            binding_app = create_bound_app_for_service(service)
         else:
             raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically")
 
@@ -366,7 +412,7 @@ def getCredentialsFromBoundApp (service=DEFAULT_SERVICE, binding_app=None):
 
 # given userid and password, attempt to authenticate to appscan for
 # future calls
-def appscanLogin (userid, password):
+def appscan_login (userid, password):
     proc = Popen(["appscan.sh login -u " + userid + " -P " + password + ""], 
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
@@ -376,7 +422,7 @@ def appscanLogin (userid, password):
 
 # callout to appscan to prepare a current irx file, return a set of
 # the files created by the prepare
-def appscanPrepare ():
+def appscan_prepare ():
 
     # sadly, prepare doesn't tell us what file it created, so find
     # out by a list compare before/after
@@ -402,9 +448,9 @@ def appscanPrepare ():
         if "An IRX file was created, but it may be incomplete" in err:
             # some jar/war/ear files were not scannable, but some were.
             # attempt the submission
-            Logger.warning("Not all files could be scanned, but the scan has been submitted for those which were")
+            LOGGER.warning("Not all files could be scanned, but the scan has been submitted for those which were")
         else:
-            if os.environ.get('DEBUG'):
+            if DEBUG:
                 call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
             raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
                             err)
@@ -421,12 +467,12 @@ def appscanPrepare ():
     for file in newIrxFiles:
         logMessage = logMessage + "\n\t" + file
 
-    Logger.info(logMessage)
+    LOGGER.info(logMessage)
 
     return newIrxFiles
 
 # submit a created irx file to appscan for analysis
-def appscanSubmit (filelist):
+def appscan_submit (filelist):
     if filelist==None:
         raise Exception("No files to analyze")
 
@@ -460,7 +506,7 @@ def appscanSubmit (filelist):
             elif line:
                 # done, if line isn't empty, is an id
                 scanlist.append(line)
-                Logger.info("Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line)
+                LOGGER.info("Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line)
             else:
                 # empty line, skip it
                 continue
@@ -471,7 +517,7 @@ def appscanSubmit (filelist):
 
 
 # get appscan list of current jobs
-def appscanList ():
+def appscan_list ():
     proc = Popen(["appscan.sh list"], 
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
@@ -491,7 +537,7 @@ def appscanList ():
     return scanlist
 
 # translate a job state to a pretty name
-def getStateName (state):
+def get_state_name (state):
     return {
         0 : "Pending",
         1 : "Starting",
@@ -510,14 +556,14 @@ def getStateName (state):
     }.get(state, "Unknown")
 
 # given a state, is the job completed
-def getStateCompleted (state):
+def get_state_completed (state):
     return {
         0 : False,
         1 : False,
         2 : False,
         3 : True,
         4 : True,
-        5 : True,
+        5 : False,
         6 : True,
         7 : True,
         8 : True,
@@ -529,14 +575,14 @@ def getStateCompleted (state):
     }.get(state, True)
 
 # given a state, was it completed successfully
-def getStateSuccessful (state):
+def get_state_successful (state):
     return {
         0 : False,
         1 : False,
         2 : False,
         3 : True,
         4 : False,
-        5 : True,
+        5 : False,
         6 : True,
         7 : False,
         8 : False,
@@ -548,7 +594,7 @@ def getStateSuccessful (state):
     }.get(state, False)
 
 # get status of a given job
-def appscanStatus (jobid):
+def appscan_status (jobid):
     if jobid == None:
         raise Exception("No jobid to check status")
 
@@ -568,7 +614,7 @@ def appscanStatus (jobid):
     return retval
 
 # cancel an appscan job
-def appscanCancel (jobid):
+def appscan_cancel (jobid):
     if jobid == None:
         return
 
@@ -577,7 +623,7 @@ def appscanCancel (jobid):
     out, err = proc.communicate();
 
 # parse a key=value line, return value
-def parseKeyEqVal (line):
+def parse_key_eq_val (line):
     if line == None:
         return None
 
@@ -609,7 +655,7 @@ def parseKeyEqVal (line):
 #
 # parse it and return useful parts.  in particular, returns
 # NInfo, NLow, NMedium, NHigh, Progress, jobName, userMessage
-def appscanInfo (jobid):
+def appscan_info (jobid):
     if jobid == None:
         return
 
@@ -627,7 +673,7 @@ def appscanInfo (jobid):
     for line in out.splitlines() :
         if "NLowIssues=" in line:
             # number of low severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
                     NLow = int(tmpstr)
@@ -636,7 +682,7 @@ def appscanInfo (jobid):
 
         elif "NMediumIssues=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
                     NMed = int(tmpstr)
@@ -645,7 +691,7 @@ def appscanInfo (jobid):
 
         elif "NHighIssues=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
                     NHigh = int(tmpstr)
@@ -654,7 +700,7 @@ def appscanInfo (jobid):
 
         elif "NInfoIssues=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
                     NInfo = int(tmpstr)
@@ -663,7 +709,7 @@ def appscanInfo (jobid):
 
         elif "Progress=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
                     Progress = int(tmpstr)
@@ -672,20 +718,20 @@ def appscanInfo (jobid):
 
         elif "Name=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 jobName = tmpstr
 
         elif "UserMessage=" in line:
             # number of medium severity issues found in the scan
-            tmpstr = parseKeyEqVal(line)
+            tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 userMsg = tmpstr
 
     return NInfo, NLow, NMed, NHigh, Progress, jobName, userMsg
 
 # get the result file for a given job
-def appscanGetResult (jobid):
+def appscan_get_result (jobid):
     if jobid == None:
         return
 
@@ -698,78 +744,116 @@ def appscanGetResult (jobid):
 
 # wait for a given set of scans to complete and, if successful,
 # download the results
-def waitforscans (joblist):
+def wait_for_scans (joblist):
+    all_jobs_complete = True
+    dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
     for jobid in joblist:
         try:
             while True:
-                state = appscanStatus(jobid)
-                Logger.info("Job " + str(jobid) + " in state " + getStateName(state))
-                if getStateCompleted(state):
-                    info,low,med,high,prog,name,msg = appscanInfo(jobid)
-                    if getStateSuccessful(state):
-                        Logger.info("Analysis successful (" + name + ")")
-                        #print "\tInfo Issues   : " + str(info)
-                        #print "\tLow Issues    : " + str(low)
-                        #print "\tMedium Issues : " + str(med)
-                        #print "\tHigh Issues   : " + str(high)
+                state = appscan_status(jobid)
+                LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
+                if get_state_completed(state):
+                    info,low,med,high,prog,name,msg = appscan_info(jobid)
+                    if get_state_successful(state):
+                        LOGGER.info("Analysis successful (" + name + ")")
                         #print "\tOther Message : " + msg
-                        #appscanGetResult(jobid)
-                        dash = findServiceDashboard(STATIC_ANALYSIS_SERVICE)
+                        #appscan_get_result(jobid)
+                        print LABEL_GREEN + STARS
+                        print "Analysis successful for job \"" + name + "\""
+                        print "\tHigh Severity Issues   : " + str(high)
+                        print "\tMedium Severity Issues : " + str(med)
+                        print "\tLow Severity Issues    : " + str(low)
+                        print "\tInfo Severity Issues   : " + str(info)
                         if dash != None:
-                            print LABEL_GREEN + STARS
-                            print "Analysis successful for job \"" + name + "\""
-                            print "See current state and results at: " + LABEL_COLOR + " " + dash
-                            print LABEL_GREEN + STARS + LABEL_NO_COLOR
+                            print "See detailed results at: " + LABEL_COLOR + " " + dash
+                        print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
-                        Logger.info("Analysis unsuccessful (" + name + ") with message \"" + msg + "\"")
+                        LOGGER.info("Analysis unsuccessful (" + name + ") with message \"" + msg + "\"")
 
                     break
                 else:
-                    time.sleep(10)
+                    time_left = get_remaining_wait_time()
+                    if (time_left > SLEEP_TIME):
+                        time.sleep(SLEEP_TIME)
+                    else:
+                        # ran out of time, flag that at least one job didn't complete
+                        all_jobs_complete = False
+                        # notify the user
+                        print LABEL_RED + STARS
+                        print "Analysis incomplete for job \"" + name + "\""
+                        print "\t" + str(prog) + "% complete"
+                        if dash != None:
+                            print "Track current state and results at: " + LABEL_COLOR + " " + dash
+                        print LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
+                        print STARS + LABEL_NO_COLOR
+
+                        # and continue to get state for other jobs
+                        break
         except Exception:
             # bad id, skip it
             pass
+
+    return all_jobs_complete
 
 
 # begin main execution sequence
 
 try:
-    Logger = setupLogging()
-    parsedArgs = parseArgs()
-    Logger.info("Getting credentials for Static Analysis service")
-    userid, password = getCredentialsFromBoundApp(service=STATIC_ANALYSIS_SERVICE)
-    Logger.info("Connecting to Static Analysis service")
-    appscanLogin(userid,password)
+    parsed_args = parse_args()
+    LOGGER = setup_logging()
+    WAIT_TIME = get_remaining_wait_time(first = True)
+    LOGGER.info("Getting credentials for Static Analysis service")
+    userid, password = get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
+    LOGGER.info("Connecting to Static Analysis service")
+    appscan_login(userid,password)
 
     # allow testing connection without full job scan and submission
-    if parsedArgs['loginonly']:
-        Logger.info("LoginOnly set, login complete, exiting")
+    if parsed_args['loginonly']:
+        LOGGER.info("LoginOnly set, login complete, exiting")
+        endtime = timeit.default_timer()
+        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         sys.exit(0)
 
     # if checkstate, don't really do a scan, just check state of current outstanding ones
-    if parsedArgs['checkstate']:
-        joblist = appscanList()
+    if parsed_args['checkstate']:
+        # for checkstate, don't wait, just check current
+        WAIT_TIME = 0
+        joblist = appscan_list()
     else:
-        Logger.info("Scanning for code submission")
-        files_to_submit = appscanPrepare()
-        Logger.info("Submitting scans for analysis")
-        joblist = appscanSubmit(files_to_submit)
-        Logger.info("Waiting for analysis to complete")
+        LOGGER.info("Scanning for code submission")
+        files_to_submit = appscan_prepare()
+        LOGGER.info("Submitting scans for analysis")
+        joblist = appscan_submit(files_to_submit)
+        LOGGER.info("Waiting for analysis to complete")
 
-    waitforscans(joblist)
+    # check on pending jobs, waiting if appropriate
+    all_jobs_complete = wait_for_scans(joblist)
 
-    if parsedArgs['cleanup']:
+    if parsed_args['cleanup']:
         # cleanup the jobs we launched (since they're complete)
         print "Cleaning up"
         for job in joblist:
-            appscanCancel(job)
+            appscan_cancel(job)
         # and cleanup the submitted irx files
         for file in files_to_submit:
             if os.path.isfile(file):
                 os.remove(file)
             if os.path.isfile(file+".log"):
                 os.remove(file+".log")
+
+    # if we didn't successfully complete jobs, return that we timed out
+    if not all_jobs_complete:
+        endtime = timeit.default_timer()
+        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        sys.exit(2)
+    else:
+        endtime = timeit.default_timer()
+        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        sys.exit(0)
+
 except Exception, e:
-    Logger.warning("Exception received", exc_info=e)
+    LOGGER.warning("Exception received", exc_info=e)
+    endtime = timeit.default_timer()
+    print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
     sys.exit(1)
 
