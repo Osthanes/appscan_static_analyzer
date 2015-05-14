@@ -429,6 +429,8 @@ def get_scanname_template ():
     if os.environ.get('APPLICATION_VERSION'):
         scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
 
+    scanname = scanname + "-"
+
     return scanname
 
 # given userid and password, attempt to authenticate to appscan for
