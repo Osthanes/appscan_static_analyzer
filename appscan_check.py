@@ -38,6 +38,7 @@ DEFAULT_SERVICE_PLAN="free"
 DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="containerbridge"
+DEFAULT_CREDENTIALS=['bindingid','password']
 DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=15
@@ -296,9 +297,9 @@ def check_and_create_bridge_app ():
     return True
 
 # look for our bridge app to bind this service to.  If it's not there,
-# attempt to create it.  Then bind the service to that app.  If it 
-# all works, return that app name as the bound app
-def create_bound_app_for_service (service=DEFAULT_SERVICE):
+# attempt to create it.  Then bind the service to that app under the 
+# given plan.  If it all works, return that app name as the bound app
+def create_bound_app_for_service (service=DEFAULT_SERVICE, plan=DEFAULT_SERVICE_PLAN):
 
     if not check_and_create_bridge_app():
         return None
@@ -311,7 +312,7 @@ def create_bound_app_for_service (service=DEFAULT_SERVICE):
     if serviceName == None:
         LOGGER.info("Service \"" + service + "\" is not loaded in this space, attempting to load it")
         serviceName = DEFAULT_SERVICE_NAME
-        command = "cf create-service \"" + service + "\" \"" + DEFAULT_SERVICE_PLAN + "\" \"" + serviceName + "\""
+        command = "cf create-service \"" + service + "\" \"" + plan + "\" \"" + serviceName + "\""
         LOGGER.debug("Executing command \"" + command + "\"")
         proc = Popen([command], 
                      shell=True, stdout=PIPE, stderr=PIPE)
@@ -336,7 +337,7 @@ def create_bound_app_for_service (service=DEFAULT_SERVICE):
 # find given bound app, and look for the passed bound service in cf.  once
 # found in VCAP_SERVICES, look for the credentials setting, and extract
 # userid, password.  Raises Exception on errors
-def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
+def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None, credentiallist=DEFAULT_CREDENTIALS):
     # if no binding app parm passed, go looking to find a bound app for this one
     if binding_app == None:
         binding_app = find_bound_app_for_service(service)
@@ -344,7 +345,7 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
     if binding_app == None:
         setupSpace = os.environ.get('SETUP_SERVICE_SPACE')
         if (setupSpace != None) and (setupSpace.lower() == "true"):
-            binding_app = create_bound_app_for_service(service)
+            binding_app = create_bound_app_for_service(service=service, plan=DEFAULT_SERVICE_PLAN)
         else:
             raise Exception("Service \"" + service + "\" is not loaded and bound in this space.  Please add the service to the space and bind it to an app, or set the parameter to allow the space to be setup automatically")
 
@@ -392,8 +393,8 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
     for x in envList:
         jsonEnvList.update(json.loads(x))
 
-    userid = ""
-    password = ""
+    return_cred_list = []
+    notFound = False
 
     # find the credentials for the service in question
     if jsonEnvList != None:
@@ -402,13 +403,17 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
             analyzerService = serviceList[service]
             if analyzerService != None:
                 credentials = analyzerService[0]['credentials']
-                userid = credentials['bindingid']
-                password = credentials['password']
+                for cred in credentiallist:
+                    if credentials[cred] == None:
+                        return_cred_list.append('')
+                        notFount = True
+                    else:
+                        return_cred_list.append(credentials[cred])
 
-    if not (userid) or not (password):
+    if notFound:
         raise Exception("Unable to get bound credentials for access to the Static Analysis service.")
 
-    return userid, password
+    return return_cred_list
 
 # create a template for a current scan.  this will be in the format
 # "<scanname>-<version>-" where scanname comes from env var 
@@ -834,9 +839,9 @@ try:
     LOGGER = setup_logging()
     WAIT_TIME = get_remaining_wait_time(first = True)
     LOGGER.info("Getting credentials for Static Analysis service")
-    userid, password = get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
+    cred_list = get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
     LOGGER.info("Connecting to Static Analysis service")
-    appscan_login(userid,password)
+    appscan_login(cred_list[0],cred_list[1])
 
     # allow testing connection without full job scan and submission
     if parsed_args['loginonly']:
