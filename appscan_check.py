@@ -816,6 +816,8 @@ def wait_for_scans (joblist):
                     else:
                         # ran out of time, flag that at least one job didn't complete
                         all_jobs_complete = False
+                        # get what info we can on this job
+                        info,low,med,high,prog,name,msg = appscan_info(jobid)
                         # notify the user
                         print LABEL_RED + STARS
                         print "Analysis incomplete for job \"" + name + "\""
