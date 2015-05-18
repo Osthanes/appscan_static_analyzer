@@ -108,22 +108,25 @@ export LOG_DIR=$ARCHIVE_DIR
 #############################
 cf help &> /dev/null
 RESULT=$?
+if [ $RESULT -eq 0 ]; then
+    # if already have an old version installed, save a pointer to it
+    export OLDCF_LOCATION=`which cf`
+fi
+# get the newest version
+echo "Installing Cloud Foundry CLI"
+pushd . >/dev/null
+cd $EXT_DIR 
+curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
+gunzip cf-linux-amd64.tgz &> /dev/null
+tar -xvf cf-linux-amd64.tar  &> /dev/null
+cf help &> /dev/null
+RESULT=$?
 if [ $RESULT -ne 0 ]; then
-    echo "Installing Cloud Foundry CLI"
-    pushd . >/dev/null
-    cd $EXT_DIR 
-    curl --silent -o cf-linux-amd64.tgz -v -L https://cli.run.pivotal.io/stable?release=linux64-binary &>/dev/null 
-    gunzip cf-linux-amd64.tgz &> /dev/null
-    tar -xvf cf-linux-amd64.tar  &> /dev/null
-    cf help &> /dev/null
-    RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
-        exit 1
-    fi  
-    popd >/dev/null
-    echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
-fi 
+    echo -e "${red}Could not install the cloud foundry CLI ${no_color}"
+    exit 1
+fi  
+popd >/dev/null
+echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
 
 #################################
 # Set Bluemix Host Information  #
