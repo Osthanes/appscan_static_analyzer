@@ -280,7 +280,13 @@ def check_and_create_bridge_app ():
 
     # our bridge app isn't around, create it
     LOGGER.info("Bridge app does not exist, attempting to create it")
-    command = "cf push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"
+    if os.environ.get('OLDCF_LOCATION'):
+        command = os.environ.get('OLDCF_LOCATION')
+        if not os.path.isfile(command):
+            command = 'cf'
+    else:
+        command = 'cf'
+    command = command +" push " + DEFAULT_BRIDGEAPP_NAME + " -i 1 -d mybluemix.net -k 1M -m 64M --no-hostname --no-manifest --no-route --no-start"
     LOGGER.debug("Executing command \"" + command + "\"")
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
