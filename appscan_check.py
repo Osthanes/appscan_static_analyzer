@@ -37,7 +37,7 @@ DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
 DEFAULT_SERVICE_PLAN="free"
 DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
-DEFAULT_BRIDGEAPP_NAME="containerbridge"
+DEFAULT_BRIDGEAPP_NAME="pipeline_bridge_app"
 DEFAULT_CREDENTIALS=['bindingid','password']
 DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
