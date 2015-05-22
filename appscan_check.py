@@ -906,7 +906,7 @@ try:
         # check for to see the status of the jobs and if we should pass the build 
         for jobid in joblist:
             info,low,med,high,prog,name,msg = appscan_info(jobid)
-            LOGGER.info("Job has " + high + " issues")
+            LOGGER.info("Job has " + str(high) + " issues")
             if high > 0: 
                 sys.exit(1) 
         sys.exit(0)
@@ -916,4 +916,3 @@ except Exception, e:
     endtime = timeit.default_timer()
     print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
     sys.exit(1)
-
