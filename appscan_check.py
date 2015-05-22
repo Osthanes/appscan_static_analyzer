@@ -907,7 +907,7 @@ try:
         for jobid in joblist:
             info,low,med,high,prog,name,msg = appscan_info(jobid)
             LOGGER.info("Job has " + high + " issues")
-            if high > 0 
+            if high > 0: 
                 sys.exit(1) 
         sys.exit(0)
 
