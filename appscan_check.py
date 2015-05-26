@@ -23,6 +23,7 @@ import os.path
 import sys
 import time
 import timeit
+from datetime import datetime
 from subprocess import call, Popen, PIPE
 
 # ascii color codes for output
@@ -39,6 +40,8 @@ DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="pipeline_bridge_app"
 DEFAULT_CREDENTIALS=['bindingid','password']
+DEFAULT_OLD_SCANS_TO_KEEP="5"
+DEFAULT_OLD_SCANS_TO_KEEP_INT=5
 DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=15
@@ -51,26 +54,43 @@ WAIT_TIME = 0
 def parse_args ():
     parsed_args = {}
     parsed_args['loginonly'] = False
-    parsed_args['cleanup'] = False
+    parsed_args['forcecleanup'] = False
     parsed_args['checkstate'] = False
     parsed_args['debug'] = False
+    parsed_args['help'] = False
     for arg in sys.argv:
         if arg == "--loginonly":
             # only login, no scanning or submission
             parsed_args['loginonly'] = True
-        if arg == "--cleanup":
+        if arg == "--forcecleanup":
             # cleanup/cancel all complete jobs, and delete irx files
-            parsed_args['cleanup'] = True
+            parsed_args['forcecleanup'] = True
         if arg == "--checkstate":
             # just check state of existing jobs, don't scan or submit
             # any new ones
             parsed_args['checkstate'] = True
-        if arg == "debug":
+        if arg == "--debug":
             # enable debug mode, can also be done with DEBUG env var
             parsed_args['debug'] = True
             DEBUG = "1"
+        if arg == "--help":
+            # just print help and return
+            parsed_args['help'] = True
 
     return parsed_args
+
+# print a quick usage/help statement
+def print_help ():
+    print "usage: appscan_check.py [options]"
+    print
+    print "\toptions:"
+    print "\t   --loginonly    : get credentials and login to appscan only"
+    print "\t   --forcecleanup : on exit, force removal of pending jobs from this run"
+    print "\t   --checkstate   : check state of existing job(s), no new submission"
+    print "\t   --debug        : get additional debug output"
+    print "\t   --help         : print this help message and exit"
+    print
+
 
 # setup logmet logging connection if it's available
 def setup_logging ():
@@ -424,16 +444,17 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None, c
 # create a template for a current scan.  this will be in the format
 # "<scanname>-<version>-" where scanname comes from env var 
 # 'SUBMISSION_NAME', and version comes from env var 'APPLICATION_VERSION'
-def get_scanname_template ():
+def get_scanname_template (include_version=True):
     # check the env for name of the scan, else use default
     if os.environ.get('SUBMISSION_NAME'):
         scanname=os.environ.get('SUBMISSION_NAME')
     else:
         scanname=DEFAULT_SCANNAME
 
-    # if we have an application version, append it to the scanname
-    if os.environ.get('APPLICATION_VERSION'):
-        scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
+    if include_version:
+        # if we have an application version, append it to the scanname
+        if os.environ.get('APPLICATION_VERSION'):
+            scanname = scanname + "-" + os.environ.get('APPLICATION_VERSION')
 
     scanname = scanname + "-"
 
@@ -673,81 +694,180 @@ def parse_key_eq_val (line):
 #Result=1
 #
 # parse it and return useful parts.  in particular, returns
-# NInfo, NLow, NMedium, NHigh, Progress, jobName, userMessage
+# a dict containing fields for "NLowIssues", "ReadStatus", et al
+# per the list above
 def appscan_info (jobid):
+
+    # setup default (empty) return
+    return_info = {}
+    return_info['NLowIssues'] = 0
+    return_info['ReadStatus'] = 0
+    return_info['NHighIssues'] = 0
+    return_info['Name'] = ""
+    return_info['ScanEndTime'] = None
+    return_info['Progress'] = 0
+    return_info['RemainingFreeRescanMinutes'] = 0
+    return_info['ParentJobId'] = ""
+    return_info['EnableMailNotifications'] = False
+    return_info['JobStatus'] = 0
+    return_info['NInfoIssues'] = 0
+    return_info['JobId'] = ""
+    return_info['NIssuesFound'] = 0
+    return_info['CreatedAt'] = None
+    return_info['UserMessage'] = ""
+    return_info['NMediumIssues'] = 0
+    return_info['Result'] = 0
+
     if jobid == None:
-        return
+        return return_info
 
     command = "appscan.sh info -i " + str(jobid)
     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
-    Progress = 100
-    NInfo = 0
-    NLow = 0
-    NMed = 0
-    NHigh = 0
-    jobName = ""
-    userMsg = ""
     for line in out.splitlines() :
         if "NLowIssues=" in line:
             # number of low severity issues found in the scan
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
-                    NLow = int(tmpstr)
+                    return_info['NLowIssues'] = int(tmpstr)
                 except ValueError:
-                    NLow = 0
+                    return_info['NLowIssues']= 0
 
         elif "NMediumIssues=" in line:
             # number of medium severity issues found in the scan
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
-                    NMed = int(tmpstr)
+                    return_info['NMediumIssues'] = int(tmpstr)
                 except ValueError:
-                    NMed = 0
+                    return_info['NMediumIssues'] = 0
 
         elif "NHighIssues=" in line:
-            # number of medium severity issues found in the scan
+            # number of high severity issues found in the scan
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
-                    NHigh = int(tmpstr)
+                    return_info['NHighIssues'] = int(tmpstr)
                 except ValueError:
-                    NHigh = 0
+                    return_info['NHighIssues'] = 0
 
         elif "NInfoIssues=" in line:
-            # number of medium severity issues found in the scan
+            # number of info severity issues found in the scan
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
-                    NInfo = int(tmpstr)
+                    return_info['NInfoIssues'] = int(tmpstr)
                 except ValueError:
-                    NInfo = 0
+                    return_info['NInfoIssues'] = 0
+
+        elif "NIssuesFound=" in line:
+            # total number of issues found in the scan
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['NIssuesFound'] = int(tmpstr)
+                except ValueError:
+                    return_info['NIssuesFound'] = 0
 
         elif "Progress=" in line:
-            # number of medium severity issues found in the scan
+            # current scan progress (0-100)
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
                 try:
-                    Progress = int(tmpstr)
+                    return_info['Progress'] = int(tmpstr)
                 except ValueError:
-                    Progress = 0
+                    return_info['Progress'] = 0
+
+        elif "RemainingFreeRescanMinutes=" in line:
+            # what the name says
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['RemainingFreeRescanMinutes'] = int(tmpstr)
+                except ValueError:
+                    return_info['RemainingFreeRescanMinutes'] = 0
+
+        elif "JobStatus=" in line:
+            # current job status
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['JobStatus'] = int(tmpstr)
+                except ValueError:
+                    return_info['JobStatus'] = 0
+
+        elif "ReadStatus=" in line:
+            # not sure what this is
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['ReadStatus'] = int(tmpstr)
+                except ValueError:
+                    return_info['ReadStatus'] = 0
+
+        elif "Result=" in line:
+            # final return code
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['Result'] = int(tmpstr)
+                except ValueError:
+                    return_info['Result'] = 0
+
+        elif "ScanEndTime=" in line:
+            # timestamp when this scan completed
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['ScanEndTime'] = datetime.strptime(tmpstr, "%Y-%m-%dT%H:%M:%S.%fZ")
+                except ValueError:
+                    return_info['ScanEndTime'] = None
+
+        elif "CreatedAt=" in line:
+            # timestamp when this job was created
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                try:
+                    return_info['CreatedAt'] = datetime.strptime(tmpstr, "%Y-%m-%dT%H:%M:%S.%fZ")
+                except ValueError:
+                    return_info['CreatedAt'] = None
 
         elif "Name=" in line:
-            # number of medium severity issues found in the scan
+            # job name
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
-                jobName = tmpstr
+                return_info['Name'] = tmpstr
+
+        elif "JobId=" in line:
+            # job ID
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                return_info['JobId'] = tmpstr
+
+        elif "ParentJobId=" in line:
+            # parent job ID
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                return_info['ParentJobId'] = tmpstr
 
         elif "UserMessage=" in line:
-            # number of medium severity issues found in the scan
+            # user displayable message, current job state
             tmpstr = parse_key_eq_val(line)
             if tmpstr != None:
-                userMsg = tmpstr
+                return_info['UserMessage'] = tmpstr
 
-    return NInfo, NLow, NMed, NHigh, Progress, jobName, userMsg
+        elif "EnableMailNotifications=" in line:
+            # are email notifications setup (doesn't matter, we don't use it)
+            tmpstr = parse_key_eq_val(line)
+            if tmpstr != None:
+                if tmpstr.lower() in ("yes", "true"):
+                    return_info['EnableMailNotifications'] = True
+                else:
+                    return_info['EnableMailNotifications'] = False
+
+    return return_info
 
 # get the result file for a given job
 def appscan_get_result (jobid):
@@ -765,19 +885,19 @@ def appscan_get_result (jobid):
 # we just want to get state (and wait for it if needed), not create a whole
 # new submission.  for the key, we use the job name, compared to the
 # name template as per get_scanname_template()
-def check_for_existing_job ():
+def check_for_existing_job ( ignore_older_jobs = True):
     alljobs = appscan_list()
     if alljobs == None:
         # no jobs, ours can't be there
         return None
 
     # get the name we're looking for
-    job_name = get_scanname_template()
+    job_name = get_scanname_template( include_version = ignore_older_jobs )
     joblist = []
     found = False
     for jobid in alljobs:
-        info,low,med,high,prog,name,msg = appscan_info(jobid)
-        if (name != None) and (name.startswith(job_name)):
+        results = appscan_info(jobid)
+        if results["Name"].startswith(job_name):
             joblist.append(jobid)
             found = True
 
@@ -786,10 +906,70 @@ def check_for_existing_job ():
     else:
         return None
 
+# don't want to have too many old copies of the job hanging out, it
+# makes a mess and is hard to read.  prune old copies here
+def cleanup_old_jobs ():
+    # see how many copies we're going to keep
+    try:
+        count_to_keep = int(os.getenv('OLD_SCANS_TO_KEEP', DEFAULT_OLD_SCANS_TO_KEEP))
+    except ValueError:
+        count_to_keep = DEFAULT_OLD_SCANS_TO_KEEP_INT
+
+    # if the count to keep is 0 or negative, keep all copies
+    if count_to_keep < 1:
+        return
+
+    joblist = check_for_existing_job( ignore_older_jobs = False )
+    if joblist == None or len(joblist) <= count_to_keep:
+        # related job count < number of jobs too keep, do nothing
+        return
+
+    # too many jobs!  remove the oldest ones (cancel if necessary)
+    if DEBUG:
+        LOGGER.debug("Found " + str(len(joblist)) + " jobs pending with limit " + str(count_to_keep))
+
+    # make a sorted list of these jobs (yes, this is O(n**2) algorithm, but
+    # this should always be a fairly short list of scans)
+    s_jobs = []
+    for job in joblist:
+        results = appscan_info(job)
+        # if no results or time, this is not a valid job, skip it
+        if (results['CreatedAt'] == None):
+            continue
+        # put it in the right spot in the list
+        i = 0
+        while i < len(s_jobs):
+            if results['CreatedAt'] > s_jobs[i]['CreatedAt']:
+                # found right place
+                if DEBUG:
+                    LOGGER.debug("Insert job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
+                s_jobs[i:i] = results
+                break
+            i += 1
+        if i==len(s_jobs):
+            # right place is the end
+            if DEBUG:
+                LOGGER.debug("Append job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
+            s_jobs.append(results)
+
+    # now cleanup all jobs after the 'n' we're supposed to keep
+    for index, res in enumerate(s_jobs):
+        if index<count_to_keep:
+            if DEBUG:
+                LOGGER.debug("keeping: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
+        else:
+            if DEBUG:
+                LOGGER.debug("cleaning: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
+            appscan_cancel(res['JobId'])
+    # and we're done
+
 # wait for a given set of scans to complete and, if successful,
 # download the results
 def wait_for_scans (joblist):
+    # were all jobs completed on return
     all_jobs_complete = True
+    # number of high sev issues in completed jobs
+    high_issue_count = 0
     dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
     for jobid in joblist:
         try:
@@ -797,22 +977,23 @@ def wait_for_scans (joblist):
                 state = appscan_status(jobid)
                 LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
                 if get_state_completed(state):
-                    info,low,med,high,prog,name,msg = appscan_info(jobid)
+                    results = appscan_info(jobid)
                     if get_state_successful(state):
-                        LOGGER.info("Analysis successful (" + name + ")")
+                        high_issue_count += results["NHighIssues"]
+                        LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
                         #appscan_get_result(jobid)
                         print LABEL_GREEN + STARS
-                        print "Analysis successful for job \"" + name + "\""
-                        print "\tHigh Severity Issues   : " + str(high)
-                        print "\tMedium Severity Issues : " + str(med)
-                        print "\tLow Severity Issues    : " + str(low)
-                        print "\tInfo Severity Issues   : " + str(info)
+                        print "Analysis successful for job \"" + results["Name"] + "\""
+                        print "\tHigh Severity Issues   : " + str(results["NHighIssues"])
+                        print "\tMedium Severity Issues : " + str(results["NMediumIssues"])
+                        print "\tLow Severity Issues    : " + str(results["NLowIssues"])
+                        print "\tInfo Severity Issues   : " + str(results["NInfoIssues"])
                         if dash != None:
                             print "See detailed results at: " + LABEL_COLOR + " " + dash
                         print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
-                        LOGGER.info("Analysis unsuccessful (" + name + ") with message \"" + msg + "\"")
+                        LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
 
                     break
                 else:
@@ -823,10 +1004,10 @@ def wait_for_scans (joblist):
                         # ran out of time, flag that at least one job didn't complete
                         all_jobs_complete = False
                         # get what info we can on this job
-                        info,low,med,high,prog,name,msg = appscan_info(jobid)
+                        results = appscan_info(jobid)
                         # notify the user
                         print LABEL_RED + STARS
-                        print "Analysis incomplete for job \"" + name + "\""
+                        print "Analysis incomplete for job \"" + results["Name"] + "\""
                         print "\t" + str(prog) + "% complete"
                         if dash != None:
                             print "Track current state and results at: " + LABEL_COLOR + " " + dash
@@ -839,13 +1020,17 @@ def wait_for_scans (joblist):
             # bad id, skip it
             pass
 
-    return all_jobs_complete
+    return all_jobs_complete, high_issue_count
 
 
 # begin main execution sequence
 
 try:
     parsed_args = parse_args()
+    if parsed_args['help']:
+        print_help()
+        sys.exit(0)
+
     LOGGER = setup_logging()
     WAIT_TIME = get_remaining_wait_time(first = True)
     LOGGER.info("Getting credentials for Static Analysis service")
@@ -864,7 +1049,11 @@ try:
     if parsed_args['checkstate']:
         # for checkstate, don't wait, just check current
         WAIT_TIME = 0
-        joblist = appscan_list()
+        # see if we have related jobs
+        joblist = check_for_existing_job()
+        if joblist == None:
+            # no related jobs, get whole list
+            joblist = appscan_list()
     else:
         # if the job we would run is already up (and either pending or complete),
         # we just want to get state (and wait for it if needed), not create a whole
@@ -880,9 +1069,10 @@ try:
             LOGGER.info("Existing job found, connecting")
 
     # check on pending jobs, waiting if appropriate
-    all_jobs_complete = wait_for_scans(joblist)
+    all_jobs_complete, high_issue_count = wait_for_scans(joblist)
 
-    if parsed_args['cleanup']:
+    # force cleanup of all?
+    if parsed_args['forcecleanup']:
         # cleanup the jobs we launched (since they're complete)
         print "Cleaning up"
         for job in joblist:
@@ -893,6 +1083,9 @@ try:
                 os.remove(file)
             if os.path.isfile(file+".log"):
                 os.remove(file+".log")
+    else:
+        # cleanup old copies of this job
+        cleanup_old_jobs()
 
     # if we didn't successfully complete jobs, return that we timed out
     if not all_jobs_complete:
@@ -902,13 +1095,8 @@ try:
     else:
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
-        dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        # check for to see the status of the jobs and if we should pass the build 
-        for jobid in joblist:
-            info,low,med,high,prog,name,msg = appscan_info(jobid)
-            LOGGER.info("Job has " + str(high) + " issues")
-            if high > 0: 
-                sys.exit(1) 
+        if high_issue_count > 0:
+            sys.exit(1)
         sys.exit(0)
 
 except Exception, e:
