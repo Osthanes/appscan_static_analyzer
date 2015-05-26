@@ -72,20 +72,20 @@ end_script_time() {
     echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 }
 
-# run the python AppScan checker, dump results on output
+# run the python IBM Security Static Analyzer checker, dump results on output
 if [ -f ${EXT_DIR}/appscan_check.py ]; then 
     ${EXT_DIR}/appscan_check.py
     RESULT=$?
 
     if [ $RESULT -ne 0 ]; then
-        echo -e \"${red}Error running AppScan ${no_color}\"
+        echo -e \"${red}Error running IBM Security Static Analyzer ${no_color}\"
         end_script_time
         exit 1
     else
         echo -e \"${green}Application scan was successful ${no_color}\"
     fi  
 else 
-    echo -e \"${red}AppScan helper script not available, failed.${no_color}\"
+    echo -e \"${red}IBM Security Static Analyzer helper script not available, failed.${no_color}\"
     end_script_time
     exit 1
 fi  
