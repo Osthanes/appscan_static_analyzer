@@ -360,8 +360,8 @@ def create_bound_app_for_service (service=DEFAULT_SERVICE, plan=DEFAULT_SERVICE_
     return DEFAULT_BRIDGEAPP_NAME
 
 # find given bound app, and look for the passed bound service in cf.  once
-# found in VCAP_SERVICES, look for the credentials setting, and extract
-# userid, password.  Raises Exception on errors
+# found in VCAP_SERVICES, look for the credentials setting, and return the
+# dict.  Raises Exception on errors
 def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
     # if no binding app parm passed, go looking to find a bound app for this one
     if binding_app == None:
@@ -376,7 +376,7 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
 
     # if STILL no binding app, we're out of options, just fail out
     if binding_app == None:
-        raise Exception("Unable to access an app bound to the Static Analysis service - this must be set to get the proper credentials.")
+        raise Exception("Unable to access an app bound to the " + service + " service - this must be set to get the proper credentials.")
 
     # try to read the env vars off the bound app in cloud foundry, the one we
     # care about is "VCAP_SERVICES"
@@ -385,7 +385,7 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
     verOut, verErr = verProc.communicate();
 
     if verProc.returncode != 0:
-        raise Exception("Unable to read credential information off the app bound to the Static Analysis service - please check that it is set correctly.")
+        raise Exception("Unable to read credential information off the app bound to the " + service + " service - please check that it is set correctly.")
 
     envList = []
     envIndex = 0
@@ -433,7 +433,7 @@ def get_credentials_from_bound_app (service=DEFAULT_SERVICE, binding_app=None):
                     return credentials
 
     if not found:
-        raise Exception("Unable to get bound credentials for access to the Static Analysis service.")
+        raise Exception("Unable to get bound credentials for access to the " + service + " service.")
 
     return None
 
