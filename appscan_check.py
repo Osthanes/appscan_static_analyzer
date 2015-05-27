@@ -448,6 +448,8 @@ def get_scanname_template (include_version=True):
     # check the env for name of the scan, else use default
     if os.environ.get('SUBMISSION_NAME'):
         scanname=os.environ.get('SUBMISSION_NAME')
+    elif os.environ.get('IDS_PROJECT_NAME'):
+        scanname=os.environ.get('IDS_PROJECT_NAME').replace(" | ", "-")
     else:
         scanname=DEFAULT_SCANNAME
 
