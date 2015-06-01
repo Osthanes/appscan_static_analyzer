@@ -21,14 +21,6 @@
             "desc_key": "ACCEPT_DESC"
         },
         {
-            "name": "SUBMISSION_NAME",
-            "type": "Text",
-            "required": "true",
-            "default_value": "securityscan",
-            "label_key": "SUBMISSION_NAME_KEY",
-            "desc_key": "SUBMISSION_NAME_DESC"
-        },
-        {
             "name": "WAIT_TIME",
             "type": "Text",
             "required": "false",
@@ -49,7 +41,6 @@
 set +x
 set +e
 export INIT_START_TIME=$(date +\"%s\")
-export SUBMISSION_NAME=#SUBMISSION_NAME#
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
 export WAIT_TIME=#WAIT_TIME#
 # OSSC line
