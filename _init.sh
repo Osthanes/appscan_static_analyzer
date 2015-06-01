@@ -76,11 +76,6 @@ fi
 
 echo "APPLICATION_VERSION: $APPLICATION_VERSION"
 
-if [ -z $SUBMISSION_NAME ]; then 
-    echo -e "${red}Please set SUBMISSION_NAME in the environment to desired name ${no_color}"
-    exit 1
-fi 
-
 ################################
 # Setup archive information    #
 ################################
