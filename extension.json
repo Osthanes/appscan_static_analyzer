@@ -68,6 +68,20 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     ${EXT_DIR}/appscan_check.py
     RESULT=$?
 
+    if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
+        echo \"Achive directory, is the working directory\"
+    else 
+        echo \"Archive directory, is ${ARCHIVE_DIR}.  Copy all content to that directory\"
+        pushd 
+        cd ${WORKSPACE}
+        tar -cf source.tar *
+        mv source.tar ${ARCHIVE_DIR}
+        cd ${ARCHIVE_DIR}
+        tar -xf source.tar 
+        rm source.tar 
+        popd 
+    fi 
+
     if [ $RESULT -ne 0 ]; then
         echo -e \"${red}Error running IBM Security Static Analyzer ${no_color}\"
         end_script_time
