@@ -210,23 +210,23 @@ if [ -n "$BLUEMIX_TARGET" ]; then
     if [ "$BLUEMIX_TARGET" == "staging" ]; then 
         # staging
         export APPSCAN_ENV=https://appscan-test.bluemix.net
-        export APPSCAN_DOMAIN=https://appscan-test.bluemix.net
+        #export APPSCAN_DOMAIN=https://appscan-test.bluemix.net
         export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan-test.bluemix.net
     elif [ "$BLUEMIX_TARGET" == "prod" ]; then 
         # prod
         export APPSCAN_ENV=https://appscan.ibmcloud.com
-        export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+        #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
         export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
     else 
         # unknown, setup for prod
         export APPSCAN_ENV=https://appscan.ibmcloud.com
-        export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+        #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
         export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
     fi 
 else 
     # none set, set for prod
     export APPSCAN_ENV=https://appscan.ibmcloud.com
-    export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
+    #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
     export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
 fi
 # fetch the current version of utils
