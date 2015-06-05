@@ -641,12 +641,16 @@ def appscan_status (jobid):
     out, err = proc.communicate();
 
     if "request is invalid" in err:
+        if DEBUG:
+            LOGGER.debug("error getting status: " + str(err))
         raise Exception("Invalid jobid")
 
     retval = 0
     try:
         retval = int(out)
     except ValueError:
+        if DEBUG:
+            LOGGER.debug("error getting status, converting val: " + str(out))
         raise Exception("Invalid jobid")
 
     return retval
