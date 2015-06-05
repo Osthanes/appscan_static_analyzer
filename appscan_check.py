@@ -1014,9 +1014,10 @@ def wait_for_scans (joblist):
 
                         # and continue to get state for other jobs
                         break
-        except Exception:
+        except Exception, e:
             # bad id, skip it
-            pass
+            if DEBUG:
+                LOGGER.debug("exception in wait_for_scans: " + str(e))
 
     return all_jobs_complete, high_issue_count
 
