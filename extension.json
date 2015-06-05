@@ -1,5 +1,5 @@
 {
-    "id": "ibm.devops.services.pipeline.appscan.static.test",
+    "id": "ibm.devops.services.pipeline.appscan.static.tester",
     "version": 1,
     "name_key": "ExtName",
     "desc_key": "ExtDesc",
