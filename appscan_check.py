@@ -972,6 +972,7 @@ def wait_for_scans (joblist):
     all_jobs_complete = True
     # number of high sev issues in completed jobs
     high_issue_count = 0
+    med_issue_count=0
     dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
     for jobid in joblist:
         try:
@@ -982,6 +983,7 @@ def wait_for_scans (joblist):
                     results = appscan_info(jobid)
                     if get_state_successful(state):
                         high_issue_count += results["NHighIssues"]
+                        med_issue_count += results["NMediumIssues"]
                         LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
                         #appscan_get_result(jobid)
@@ -1023,7 +1025,7 @@ def wait_for_scans (joblist):
             if DEBUG:
                 LOGGER.debug("exception in wait_for_scans: " + str(e))
 
-    return all_jobs_complete, high_issue_count
+    return all_jobs_complete, high_issue_count, med_issue_count
 
 
 # begin main execution sequence
@@ -1080,7 +1082,7 @@ try:
             LOGGER.info("Existing job found, connecting")
 
     # check on pending jobs, waiting if appropriate
-    all_jobs_complete, high_issue_count = wait_for_scans(joblist)
+    all_jobs_complete, high_issue_count, med_issue_count = wait_for_scans(joblist)
 
     # force cleanup of all?
     if parsed_args['forcecleanup']:
@@ -1124,12 +1126,20 @@ try:
             
             sys.exit(1)
 
-        # send slack notification 
-        dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
-        proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate();
-        LOGGER.debug(out)
+        if med_issue_count > 0: 
+            # send slack notification 
+            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
+            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+            out, err = proc.communicate();
+            LOGGER.debug(out)
+        else             
+            # send slack notification 
+            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
+            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+            out, err = proc.communicate();
+            LOGGER.debug(out)
 
         sys.exit(0)
 
