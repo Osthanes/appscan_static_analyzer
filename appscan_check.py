@@ -1035,6 +1035,14 @@ try:
         sys.exit(0)
 
     LOGGER = setup_logging()
+    # send slack notification 
+    dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+    command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
+    print "running command " + command 
+    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = proc.communicate();
+    LOGGER.debug(out)
+    
     WAIT_TIME = get_remaining_wait_time(first = True)
     LOGGER.info("Getting credentials for Static Analysis service")
     creds = get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
@@ -1097,7 +1105,7 @@ try:
         
         # send slack notification 
         dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        command='{path}/utilities/sendMessage.sh -l bad -m <{url}|Static security scan> did not complete within {wait}'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
+        command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait}\"'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
         proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
         LOGGER.debug(out)
@@ -1110,7 +1118,7 @@ try:
         if high_issue_count > 0:
             # send slack notification 
             dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='{path}/utilities/sendMessage.sh -l good -m <{url}|Static security scan> completed with no major issues'.format(path=os.environ['EXT_DIR'],url=dash)
+            command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues\"'.format(path=os.environ['EXT_DIR'],url=dash)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
             LOGGER.debug(out)
@@ -1118,7 +1126,7 @@ try:
 
         # send slack notification 
         dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        command='{path}/utilities/sendMessage.sh -l good -m <{url}|Static security scan> completed with no major issues'.format(path=os.environ['EXT_DIR'],url=dash)
+        command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues\"'.format(path=os.environ['EXT_DIR'],url=dash)
         proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
         LOGGER.debug(out)
