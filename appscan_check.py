@@ -41,12 +41,14 @@ DEFAULT_SCANNAME="staticscan"
 DEFAULT_BRIDGEAPP_NAME="pipeline_bridge_app"
 DEFAULT_OLD_SCANS_TO_KEEP="5"
 DEFAULT_OLD_SCANS_TO_KEEP_INT=5
+EXT_DIR=os.getenv('EXT_DIR', ".")
 DEBUG=os.environ.get('DEBUG')
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=15
 
 SCRIPT_START_TIME = timeit.default_timer()
 LOGGER = None
+FULL_WAIT_TIME = 5
 WAIT_TIME = 0
 
 # check cli args, set globals appropriately
@@ -124,12 +126,16 @@ def setup_logging ():
 # return is the expected max time left in seconds we're allowed to wait
 # for pending jobs to complete
 def get_remaining_wait_time (first = False):
+    global FULL_WAIT_TIME
     if first:
         # first time through, set up the var from env
         try:
-            time_to_wait = int(os.getenv('WAIT_TIME', "5")) * 60
+            FULL_WAIT_TIME = int(os.getenv('WAIT_TIME', "5"))
         except ValueError:
-            time_to_wait = 300
+            FULL_WAIT_TIME = 5
+
+        # convert to seconds
+        time_to_wait = FULL_WAIT_TIME * 60
 
         # and (if not 0) subtract out init time
         if time_to_wait != 0:
@@ -1038,12 +1044,16 @@ try:
 
     LOGGER = setup_logging()
     # send slack notification 
-    dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-    command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
-    print "running command " + command 
-    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate();
-    LOGGER.debug(out)
+    if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
+        command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=EXT_DIR)
+        if DEBUG:
+            print "running command " + command 
+        proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+        LOGGER.debug(out)
+    else:
+        if DEBUG:
+            print "sendMessage.sh not found, notifications not attempted"
     
     WAIT_TIME = get_remaining_wait_time(first = True)
     LOGGER.info("Getting credentials for Static Analysis service")
@@ -1102,42 +1112,46 @@ try:
 
     # if we didn't successfully complete jobs, return that we timed out
     if not all_jobs_complete:
+        # send slack notification 
+        if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
+            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=EXT_DIR,url=dash,wait=FULL_WAIT_TIME)
+            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+            out, err = proc.communicate();
+            LOGGER.debug(out)
+
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
-        
-        # send slack notification 
-        dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
-        proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate();
-        LOGGER.debug(out)
-
         sys.exit(2)
     else:
-        endtime = timeit.default_timer()
-        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         if high_issue_count > 0:
             # send slack notification 
-            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=os.environ['EXT_DIR'],url=dash, issues=high_issue_count)
-            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-            out, err = proc.communicate();
-            LOGGER.debug(out)
+            if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
+                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=EXT_DIR,url=dash, issues=high_issue_count)
+                proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+                out, err = proc.communicate();
+                LOGGER.debug(out)
             
+            endtime = timeit.default_timer()
+            print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
             sys.exit(1)
 
-        if med_issue_count > 0: 
-            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
-            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-            out, err = proc.communicate();
-            LOGGER.debug(out)
-        else:            
-            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
-            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
-            out, err = proc.communicate();
-            LOGGER.debug(out)
+        if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
+            if med_issue_count > 0: 
+                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=EXT_DIR,url=dash)
+                proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+                out, err = proc.communicate();
+                LOGGER.debug(out)
+            else:            
+                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=EXT_DIR,url=dash)
+                proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+                out, err = proc.communicate();
+                LOGGER.debug(out)
+        endtime = timeit.default_timer()
+        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         sys.exit(0)
 
 except Exception, e:
