@@ -1107,7 +1107,21 @@ try:
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         if high_issue_count > 0:
+            # send slack notification 
+            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            command='${EXT_DIR}/utilities/sendMessage.sh -l good -m <{url}|Static security scan> completed with no major issues'.format(url=dash)
+            proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+            out, err = proc.communicate();
+            LOGGER.debug(out)
             sys.exit(1)
+
+        # send slack notification 
+        dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+        command='${EXT_DIR}/utilities/sendMessage.sh -l good -m <{url}|Static security scan> completed with no major issues'.format(url=dash)
+        proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+        LOGGER.debug(out)
+
         sys.exit(0)
 
 except Exception, e:
