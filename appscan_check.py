@@ -1094,6 +1094,14 @@ try:
     if not all_jobs_complete:
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        
+        # send slack notification 
+        dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+        command='${EXT_DIR}/utilities/sendMessage.sh -l bad -m <{url}|Static security scan> did not complete within {wait}'.format(url=dash,state=WAIT_TIME)
+        proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate();
+        LOGGER.debug(out)
+
         sys.exit(2)
     else:
         endtime = timeit.default_timer()
