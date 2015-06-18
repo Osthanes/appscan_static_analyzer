@@ -1127,20 +1127,17 @@ try:
             sys.exit(1)
 
         if med_issue_count > 0: 
-            # send slack notification 
             dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
             command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
             LOGGER.debug(out)
-        else             
-            # send slack notification 
+        else:            
             dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
             command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=os.environ['EXT_DIR'],url=dash)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
             LOGGER.debug(out)
-
         sys.exit(0)
 
 except Exception, e:
