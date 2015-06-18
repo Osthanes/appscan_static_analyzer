@@ -1104,6 +1104,7 @@ try:
 
         sys.exit(2)
     else:
+        print "Sending notifications"
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         if high_issue_count > 0:
