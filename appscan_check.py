@@ -1112,7 +1112,6 @@ try:
 
         sys.exit(2)
     else:
-        print "Sending notifications"
         endtime = timeit.default_timer()
         print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
         if high_issue_count > 0:
@@ -1122,6 +1121,7 @@ try:
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
             LOGGER.debug(out)
+            
             sys.exit(1)
 
         # send slack notification 
