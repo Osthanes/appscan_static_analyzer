@@ -1097,7 +1097,7 @@ try:
         
         # send slack notification 
         dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-        command='{path}/utilities/sendMessage.sh -l bad -m <{url}|Static security scan> did not complete within {wait}'.format(path=path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
+        command='{path}/utilities/sendMessage.sh -l bad -m <{url}|Static security scan> did not complete within {wait}'.format(path=os.environ['EXT_DIR'],url=dash,state=WAIT_TIME)
         proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
         LOGGER.debug(out)
