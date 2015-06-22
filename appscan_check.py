@@ -1018,7 +1018,7 @@ def wait_for_scans (joblist):
                         # notify the user
                         print LABEL_RED + STARS
                         print "Analysis incomplete for job \"" + results["Name"] + "\""
-                        print "\t" + str(prog) + "% complete"
+                        print "\t" + str(results["Progress"]) + "% complete"
                         if dash != None:
                             print "Track current state and results at: " + LABEL_COLOR + " " + dash
                         print LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
