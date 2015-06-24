@@ -123,23 +123,37 @@ fi
 popd >/dev/null
 echo -e "${label_color}Successfully installed Cloud Foundry CLI ${no_color}"
 
-#################################
-# Set Bluemix Host Information  #
-#################################
-if [ -n "$BLUEMIX_TARGET" ]; then
+##########################################
+# setup bluemix env
+##########################################
+# attempt to  target env automatically
+CF_API=`cf api`
+if [ $? -eq 0 ]; then
+    # find the bluemix api host
+    export BLUEMIX_API_HOST=`echo $CF_API  | awk '{print $3}' | sed '0,/.*\/\//s///'`
+    echo $BLUEMIX_API_HOST | grep 'stage1'
+    if [ $? -eq 0 ]; then
+        # on staging, make sure bm target is set for staging
+        export BLUEMIX_TARGET="staging"
+    else
+        # on prod, make sure bm target is set for prod
+        export BLUEMIX_TARGET="prod"
+    fi
+elif [ -n "$BLUEMIX_TARGET" ]; then
+    # cf not setup yet, try manual setup
     if [ "$BLUEMIX_TARGET" == "staging" ]; then 
+        echo -e "Targetting staging Bluemix"
         export BLUEMIX_API_HOST="api.stage1.ng.bluemix.net"
     elif [ "$BLUEMIX_TARGET" == "prod" ]; then 
         echo -e "Targetting production Bluemix"
         export BLUEMIX_API_HOST="api.ng.bluemix.net"
     else 
-        echo -e "${red}Unknown Bluemix environment specified"
+        echo -e "${red}Unknown Bluemix environment specified${no_color}" | tee -a "$ERROR_LOG_FILE"
     fi 
 else 
     echo -e "Targetting production Bluemix"
     export BLUEMIX_API_HOST="api.ng.bluemix.net"
-
-fi  
+fi
 
 ################################
 # Login to Container Service   #
