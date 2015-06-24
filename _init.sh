@@ -148,7 +148,7 @@ elif [ -n "$BLUEMIX_TARGET" ]; then
         echo -e "Targetting production Bluemix"
         export BLUEMIX_API_HOST="api.ng.bluemix.net"
     else 
-        echo -e "${red}Unknown Bluemix environment specified${no_color}" | tee -a "$ERROR_LOG_FILE"
+        echo -e "${red}Unknown Bluemix environment specified${no_color}"
     fi 
 else 
     echo -e "Targetting production Bluemix"
