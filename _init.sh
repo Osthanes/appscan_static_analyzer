@@ -155,9 +155,9 @@ else
     export BLUEMIX_API_HOST="api.ng.bluemix.net"
 fi
 
-################################
-# Login to Container Service   #
-################################
+####################################
+# Check login to Bluemix Service   #
+####################################
 if [ -n "$BLUEMIX_USER" ] || [ ! -f ~/.cf/config.json ]; then
     # need to gather information from the environment 
     # Get the Bluemix user and password information 
