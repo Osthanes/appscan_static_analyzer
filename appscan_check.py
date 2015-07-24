@@ -25,7 +25,7 @@ import time
 import timeit
 from datetime import datetime
 from subprocess import call, Popen, PIPE
-from python_utils import *
+import python_utils
 
 STATIC_ANALYSIS_SERVICE='Static Analyzer'
 DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
@@ -37,8 +37,6 @@ DEFAULT_OLD_SCANS_TO_KEEP_INT=5
 # time to sleep between checks when waiting on pending jobs, in seconds
 SLEEP_TIME=15
 
-#SCRIPT_START_TIME = timeit.default_timer()
-#WAIT_TIME = 0
 
 # check cli args, set globals appropriately
 def parse_args ():
@@ -60,9 +58,9 @@ def parse_args ():
             # any new ones
             parsed_args['checkstate'] = True
         if arg == "--debug":
-            # enable debug mode, can also be done with DEBUG env var
+            # enable debug mode, can also be done with python_utils.DEBUG env var
             parsed_args['debug'] = True
-            DEBUG = "1"
+            python_utils.DEBUG = "1"
         if arg == "--help":
             # just print help and return
             parsed_args['help'] = True
@@ -141,9 +139,9 @@ def appscan_prepare ():
         if "An IRX file was created, but it may be incomplete" in err:
             # some jar/war/ear files were not scannable, but some were.
             # attempt the submission
-            LOGGER.warning("Not all files could be scanned, but the scan has been submitted for those which were")
+            python_utils.LOGGER.warning("Not all files could be scanned, but the scan has been submitted for those which were")
         else:
-            if DEBUG:
+            if python_utils.DEBUG:
                 call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
             raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
                             err)
@@ -160,7 +158,7 @@ def appscan_prepare ():
     for file in newIrxFiles:
         logMessage = logMessage + "\n\t" + file
 
-    LOGGER.info(logMessage)
+    python_utils.LOGGER.info(logMessage)
 
     return newIrxFiles
 
@@ -189,7 +187,7 @@ def appscan_submit (filelist):
             elif line:
                 # done, if line isn't empty, is an id
                 scanlist.append(line)
-                LOGGER.info("Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line)
+                python_utils.LOGGER.info("Job for file " + filename + " was submitted as scan " + submit_scanname + " and assigned id " + line)
             else:
                 # empty line, skip it
                 continue
@@ -286,16 +284,16 @@ def appscan_status (jobid):
     out, err = proc.communicate();
 
     if "request is invalid" in err:
-        if DEBUG:
-            LOGGER.debug("error getting status: " + str(err))
+        if python_utils.DEBUG:
+            python_utils.LOGGER.debug("error getting status: " + str(err))
         raise Exception("Invalid jobid")
 
     retval = 0
     try:
         retval = int(out)
     except ValueError:
-        if DEBUG:
-            LOGGER.debug("error getting status, converting val: " + str(out))
+        if python_utils.DEBUG:
+            python_utils.LOGGER.debug("error getting status, converting val: " + str(out))
         raise Exception("Invalid jobid")
 
     return retval
@@ -572,8 +570,8 @@ def cleanup_old_jobs ():
         return
 
     # too many jobs!  remove the oldest ones (cancel if necessary)
-    if DEBUG:
-        LOGGER.debug("Found " + str(len(joblist)) + " jobs pending with limit " + str(count_to_keep))
+    if python_utils.DEBUG:
+        python_utils.LOGGER.debug("Found " + str(len(joblist)) + " jobs pending with limit " + str(count_to_keep))
 
     # make a sorted list of these jobs (yes, this is O(n**2) algorithm, but
     # this should always be a fairly short list of scans)
@@ -588,25 +586,25 @@ def cleanup_old_jobs ():
         while i < len(s_jobs):
             if results['CreatedAt'] > s_jobs[i]['CreatedAt']:
                 # found right place
-                if DEBUG:
-                    LOGGER.debug("Insert job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
+                if python_utils.DEBUG:
+                    python_utils.LOGGER.debug("Insert job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
                 s_jobs[i:i] = results
                 break
             i += 1
         if i==len(s_jobs):
             # right place is the end
-            if DEBUG:
-                LOGGER.debug("Append job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
+            if python_utils.DEBUG:
+                python_utils.LOGGER.debug("Append job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
             s_jobs.append(results)
 
     # now cleanup all jobs after the 'n' we're supposed to keep
     for index, res in enumerate(s_jobs):
         if index<count_to_keep:
-            if DEBUG:
-                LOGGER.debug("keeping: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
+            if python_utils.DEBUG:
+                python_utils.LOGGER.debug("keeping: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
         else:
-            if DEBUG:
-                LOGGER.debug("cleaning: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
+            if python_utils.DEBUG:
+                python_utils.LOGGER.debug("cleaning: " + str(index) + " \"" + res['Name'] + "\" : " + str(res['JobId']))
             appscan_cancel(res['JobId'])
     # and we're done
 
@@ -618,18 +616,18 @@ def wait_for_scans (joblist):
     # number of high sev issues in completed jobs
     high_issue_count = 0
     med_issue_count=0
-    dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+    dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
     for jobid in joblist:
         try:
             while True:
                 state = appscan_status(jobid)
-                LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
+                python_utils.LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
                 if get_state_completed(state):
                     results = appscan_info(jobid)
                     if get_state_successful(state):
                         high_issue_count += results["NHighIssues"]
                         med_issue_count += results["NMediumIssues"]
-                        LOGGER.info("Analysis successful (" + results["Name"] + ")")
+                        python_utils.LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
                         #appscan_get_result(jobid)
                         print LABEL_GREEN + STARS
@@ -642,11 +640,11 @@ def wait_for_scans (joblist):
                             print "See detailed results at: " + LABEL_COLOR + " " + dash
                         print LABEL_GREEN + STARS + LABEL_NO_COLOR
                     else: 
-                        LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
+                        python_utils.LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
 
                     break
                 else:
-                    time_left = get_remaining_wait_time()
+                    time_left = python_utils.get_remaining_wait_time()
                     if (time_left > SLEEP_TIME):
                         time.sleep(SLEEP_TIME)
                     else:
@@ -667,8 +665,8 @@ def wait_for_scans (joblist):
                         break
         except Exception, e:
             # bad id, skip it
-            if DEBUG:
-                LOGGER.debug("exception in wait_for_scans: " + str(e))
+            if python_utils.DEBUG:
+                python_utils.LOGGER.debug("exception in wait_for_scans: " + str(e))
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
@@ -681,36 +679,36 @@ try:
         print_help()
         sys.exit(0)
 
-    LOGGER = setup_logging()
+    python_utils.LOGGER = python_utils.setup_logging()
     # send slack notification 
-    if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
-        command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=EXT_DIR)
-        if DEBUG:
+    if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
+        command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=python_utils.EXT_DIR)
+        if python_utils.DEBUG:
             print "running command " + command 
         proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
-        LOGGER.debug(out)
+        python_utils.LOGGER.debug(out)
     else:
-        if DEBUG:
+        if python_utils.DEBUG:
             print "sendMessage.sh not found, notifications not attempted"
     
-    WAIT_TIME = get_remaining_wait_time(first = True)
-    LOGGER.info("Getting credentials for Static Analysis service")
-    creds = get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
-    LOGGER.info("Connecting to Static Analysis service")
+    python_utils.WAIT_TIME = python_utils.get_remaining_wait_time(first = True)
+    python_utils.LOGGER.info("Getting credentials for Static Analysis service")
+    creds = python_utils.get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
+    python_utils.LOGGER.info("Connecting to Static Analysis service")
     appscan_login(creds['bindingid'],creds['password'])
 
     # allow testing connection without full job scan and submission
     if parsed_args['loginonly']:
-        LOGGER.info("LoginOnly set, login complete, exiting")
+        python_utils.LOGGER.info("LoginOnly set, login complete, exiting")
         endtime = timeit.default_timer()
-        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
         sys.exit(0)
 
     # if checkstate, don't really do a scan, just check state of current outstanding ones
     if parsed_args['checkstate']:
         # for checkstate, don't wait, just check current
-        WAIT_TIME = 0
+        python_utils.WAIT_TIME = 0
         # see if we have related jobs
         joblist = check_for_existing_job()
         if joblist == None:
@@ -722,13 +720,13 @@ try:
         # new submission
         joblist = check_for_existing_job()
         if joblist == None:
-            LOGGER.info("Scanning for code submission")
+            python_utils.LOGGER.info("Scanning for code submission")
             files_to_submit = appscan_prepare()
-            LOGGER.info("Submitting scans for analysis")
+            python_utils.LOGGER.info("Submitting scans for analysis")
             joblist = appscan_submit(files_to_submit)
-            LOGGER.info("Waiting for analysis to complete")
+            python_utils.LOGGER.info("Waiting for analysis to complete")
         else:
-            LOGGER.info("Existing job found, connecting")
+            python_utils.LOGGER.info("Existing job found, connecting")
 
     # check on pending jobs, waiting if appropriate
     all_jobs_complete, high_issue_count, med_issue_count = wait_for_scans(joblist)
@@ -752,49 +750,49 @@ try:
     # if we didn't successfully complete jobs, return that we timed out
     if not all_jobs_complete:
         # send slack notification 
-        if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
-            dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=EXT_DIR,url=dash,wait=FULL_WAIT_TIME)
+        if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
+            dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=python_utils.EXT_DIR,url=dash,wait=FULL_python_utils.WAIT_TIME)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
-            LOGGER.debug(out)
+            python_utils.LOGGER.debug(out)
 
         endtime = timeit.default_timer()
-        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
         sys.exit(2)
     else:
         if high_issue_count > 0:
             # send slack notification 
-            if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
-                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-                command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=EXT_DIR,url=dash, issues=high_issue_count)
+            if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
+                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=python_utils.EXT_DIR,url=dash, issues=high_issue_count)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
-                LOGGER.debug(out)
+                python_utils.LOGGER.debug(out)
             
             endtime = timeit.default_timer()
-            print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+            print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
             sys.exit(1)
 
-        if os.path.isfile("%s/utilities/sendMessage.sh" % EXT_DIR):
+        if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
             if med_issue_count > 0: 
-                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-                command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=EXT_DIR,url=dash)
+                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
-                LOGGER.debug(out)
+                python_utils.LOGGER.debug(out)
             else:            
-                dash = find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-                command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=EXT_DIR,url=dash)
+                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
-                LOGGER.debug(out)
+                python_utils.LOGGER.debug(out)
         endtime = timeit.default_timer()
-        print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+        print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
         sys.exit(0)
 
 except Exception, e:
-    LOGGER.warning("Exception received", exc_info=e)
+    python_utils.LOGGER.warning("Exception received", exc_info=e)
     endtime = timeit.default_timer()
-    print "Script completed in " + str(endtime - SCRIPT_START_TIME) + " seconds"
+    print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
     sys.exit(1)
