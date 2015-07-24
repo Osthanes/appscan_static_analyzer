@@ -630,15 +630,15 @@ def wait_for_scans (joblist):
                         python_utils.LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
                         #appscan_get_result(jobid)
-                        print LABEL_GREEN + STARS
+                        print python_utils.LABEL_GREEN + python_utils.STARS
                         print "Analysis successful for job \"" + results["Name"] + "\""
                         print "\tHigh Severity Issues   : " + str(results["NHighIssues"])
                         print "\tMedium Severity Issues : " + str(results["NMediumIssues"])
                         print "\tLow Severity Issues    : " + str(results["NLowIssues"])
                         print "\tInfo Severity Issues   : " + str(results["NInfoIssues"])
                         if dash != None:
-                            print "See detailed results at: " + LABEL_COLOR + " " + dash
-                        print LABEL_GREEN + STARS + LABEL_NO_COLOR
+                            print "See detailed results at: " + python_utils.LABEL_COLOR + " " + dash
+                        print python_utils.LABEL_GREEN + python_utils.STARS + python_utils.LABEL_NO_COLOR
                     else: 
                         python_utils.LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
 
@@ -653,13 +653,13 @@ def wait_for_scans (joblist):
                         # get what info we can on this job
                         results = appscan_info(jobid)
                         # notify the user
-                        print LABEL_RED + STARS
+                        print python_utils.LABEL_RED + python_utils.STARS
                         print "Analysis incomplete for job \"" + results["Name"] + "\""
                         print "\t" + str(results["Progress"]) + "% complete"
                         if dash != None:
-                            print "Track current state and results at: " + LABEL_COLOR + " " + dash
-                        print LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
-                        print STARS + LABEL_NO_COLOR
+                            print "Track current state and results at: " + python_utils.LABEL_COLOR + " " + dash
+                        print python_utils.LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
+                        print python_utils.STARS + python_utils.LABEL_NO_COLOR
 
                         # and continue to get state for other jobs
                         break
