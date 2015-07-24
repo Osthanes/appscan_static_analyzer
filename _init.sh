@@ -210,6 +210,7 @@ fi
 pushd . >/dev/null
 cd $EXT_DIR 
 git clone https://github.com/Osthanes/utilities.git utilities
+export PYTHONPATH=$EXT_DIR/utilities:$PYTHONPATH
 popd >/dev/null
 # enable logging to logmet
 source $EXT_DIR/utilities/logging_utils.sh
