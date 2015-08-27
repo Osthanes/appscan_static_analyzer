@@ -752,7 +752,7 @@ try:
         # send slack notification 
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
             dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
-            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=python_utils.EXT_DIR,url=dash,wait=FULL_python_utils.WAIT_TIME)
+            command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=python_utils.EXT_DIR,url=dash,wait=python_utils.FULL_WAIT_TIME)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
             python_utils.LOGGER.debug(out)
