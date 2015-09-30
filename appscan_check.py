@@ -608,14 +608,6 @@ def cleanup_old_jobs ():
             appscan_cancel(res['JobId'])
     # and we're done
 
-def getResults (in_results):
-    out_results = {'name': ctrlName, 
-                  'description': ctrlDescrip, 
-                  'type': ctrlType,
-                  'controller_services': self.getController_services()}
-    return controller
-
-
 # wait for a given set of scans to complete and, if successful,
 # download the results
 def wait_for_scans (joblist):
