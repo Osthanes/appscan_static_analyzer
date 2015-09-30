@@ -69,18 +69,20 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     RESULT=$?
 
     # add the appscan result json file to DRA
-    RESULT_FILE=\"appscan-result.json\"
-    if [ -e "$RESULT_FILE" ] && [ $DRA_ENABLED -eq 0 ]; then
-        add_result_rule_to_dra \"${RESULT_FILE}\"
-        RC=$?
-        if [ $RC -eq 0 ]; then
-           echo -e \"${green}Request for the DRA decision.${no_color}\"
-           grunt -decision=\"${CRITERIAL_NAME}\"
+    if [ $DRA_ENABLED -eq 0 ]; then
+        RESULT_FILE=\"appscan-result.json\"
+        if [ -e \"$RESULT_FILE\" ]; then
+            add_result_rule_to_dra \"${RESULT_FILE}\"
+            RC=$?
+            if [ $RC -eq 0 ]; then
+                echo -e \"${green}Request for the DRA decision.${no_color}\"
+                grunt -decision=\"${CRITERIAL_NAME}\"
+            else
+                echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
+            fi
         else
-            echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
+            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE} or DRA is not enabled (DRA_ENABLED = ${DRA_ENABLED}.${no_color}\"
         fi
-    else
-        echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE} or DRA is not enabled (DRA_ENABLED = ${DRA_ENABLED}.${no_color}\"
     fi
 
     if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
