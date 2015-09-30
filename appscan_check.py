@@ -611,6 +611,8 @@ def cleanup_old_jobs ():
 # wait for a given set of scans to complete and, if successful,
 # download the results
 def wait_for_scans (joblist):
+    # create array of the jon results in json format
+    jobResults = []
     # were all jobs completed on return
     all_jobs_complete = True
     # number of high sev issues in completed jobs
@@ -639,8 +641,22 @@ def wait_for_scans (joblist):
                         if dash != None:
                             print "See detailed results at: " + python_utils.LABEL_COLOR + " " + dash
                         print python_utils.LABEL_GREEN + python_utils.STARS + python_utils.LABEL_NO_COLOR
+
+                        # append results to the jobResults for the json format
+                        jobResults.append({'job_name': results["Name"], 
+                                           'job_id': jobid, 
+                                           'status': "successful",
+                                           'high_severity_issues': int(str(results["NHighIssues"])),
+                                           'medium_severity_issues': int(str(results["NMediumIssues"])),
+                                           'low_severity_issues': int(str(results["NLowIssues"])),
+                                           'info_severity_issues': int(str(results["NInfoIssues"]))})
                     else: 
                         python_utils.LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
+
+                        # append results to the jobResults for the json format
+                        jobResults.append({'job_name': results["Name"], 
+                                           'job_id': jobid, 
+                                           'status': "unsuccessful"})
 
                     break
                 else:
@@ -661,12 +677,28 @@ def wait_for_scans (joblist):
                         print python_utils.LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
                         print python_utils.STARS + python_utils.LABEL_NO_COLOR
 
+                        # append results to the jobResults for the json format
+                        jobResults.append({'job_name': results["Name"], 
+                                           'job_id': jobid, 
+                                           'status': "incomplete",
+                                           'percentage_complete': int(str(results["Progress"]))})
+
                         # and continue to get state for other jobs
                         break
         except Exception, e:
             # bad id, skip it
             if python_utils.DEBUG:
                 python_utils.LOGGER.debug("exception in wait_for_scans: " + str(e))
+
+    # generate appscan-result.json file 
+    appscan_result = {'all_jobs_complete': all_jobs_complete, 
+                      'high_issue_count': high_issue_count, 
+                      'medium_issue_count': med_issue_count,
+                      'job_results': jobResults}
+    appscan_result_file = './appscan-result.json'
+    with open(appscan_result_file, 'w') as outfile:
+        json.dump(appscan_result, outfile, sort_keys = True)
+    python_utils.LOGGER.info(open(appscan_result_file,"rb").read())
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
@@ -772,7 +804,7 @@ try:
             
             endtime = timeit.default_timer()
             print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
-            sys.exit(1)
+            sys.exit(3)
 
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
             if med_issue_count > 0: 
