@@ -266,7 +266,7 @@ export DRA_ENABLED=1
 export CRITERIAL_NAME="appscan_criteria"
 setup_dra "${CRITERIAL_NAME}"
 if [ $RESULT -eq 0 ]; then
-    log_and_echo "Setup DRA for criterial name '${CRITERIAL_NAME}'."
+    log_and_echo "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
 elif [ $RESULT -gt 1 ]; then
     log_and_echo "$WARN" "Failed to setup DRA for criterial name '${CRITERIAL_NAME}'."
 fi
