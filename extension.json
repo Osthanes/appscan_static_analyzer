@@ -75,8 +75,11 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
             add_result_rule_to_dra \"${RESULT_FILE}\"
             RC=$?
             if [ $RC -eq 0 ]; then
-                echo -e \"${green}Request for the DRA decision.${no_color}\"
-                grunt -decision=\"${CRITERIAL_NAME}\"
+                echo -e \"${green}Request DRA decision for ${CRITERIAL_NAME}.${no_color}\"
+                dra_grunt_cmd \"decision=${CRITERIAL_NAME}\"
+                if [ $RC -ne 0 ]; then
+                    echo -e \"${label_color}Failed to execute decision for criterial ${CRITERIAL_NAME} with return error code ${RC}.${no_color}\"
+                fi
             else
                 echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
             fi
