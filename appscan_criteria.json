@@ -11,19 +11,19 @@
 			"conditions":
 			[
 				{
-					"eval": "all_jobs_complete",
+					"eval": "filecontents.all_jobs_complete",
 					"op": "=",
 					"value": "True"
 				},
 
 				{
-					"eval": "high_issue_count",
+					"eval": "filecontents.high_issue_count",
 					"op": "=",
 					"value": 0
 				},
 
 				{
-					"eval": "medium_issue_count",
+					"eval": "filecontents.medium_issue_count",
 					"op": "<",
 					"value": 2
 				}
