@@ -77,6 +77,7 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
             if [ $RC -eq 0 ]; then
                 echo -e \"${green}Request DRA decision for ${CRITERIAL_NAME}.${no_color}\"
                 dra_grunt_decision \"${CRITERIAL_NAME}\"
+                RC=$?
                 if [ $RC -eq 0 ]; then
                     echo -e \"${green}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
                 elif [ $RC -eq 1 ]; then
