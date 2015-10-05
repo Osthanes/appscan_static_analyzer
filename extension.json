@@ -76,8 +76,14 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
             RC=$?
             if [ $RC -eq 0 ]; then
                 echo -e \"${green}Request DRA decision for ${CRITERIAL_NAME}.${no_color}\"
-                dra_grunt_cmd \"decision=${CRITERIAL_NAME}\"
-                if [ $RC -ne 0 ]; then
+                dra_grunt_decision \"${CRITERIAL_NAME}\"
+                if [ $RC -eq 0 ]; then
+                    echo -e \"${green}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                elif [ $RC -eq 1 ]; then
+                    echo -e \"${label_color}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                elif [ $RC -eq 2 ]; then
+                    echo -e \"${red}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                else
                     echo -e \"${label_color}Failed to execute decision for criterial ${CRITERIAL_NAME} with return error code ${RC}.${no_color}\"
                 fi
             else
