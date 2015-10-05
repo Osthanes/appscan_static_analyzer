@@ -13,7 +13,7 @@
 				{
 					"eval": "filecontents.all_jobs_complete",
 					"op": "=",
-					"value": "True"
+					"value": true
 				},
 
 				{
