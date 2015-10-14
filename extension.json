@@ -91,7 +91,7 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
                 echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
             fi
         else
-            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE} or DRA is not enabled (DRA_ENABLED = ${DRA_ENABLED}.${no_color}\"
+            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE}.${no_color}\"
         fi
     fi
 
@@ -115,10 +115,16 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
 
     if [ $RESULT -ne 0 ]; then
         echo -e \"${red}Error running IBM Security Static Analyzer ${no_color}\"
+        if [ $DRA_ENABLED -eq 0 ]; then
+            ${EXT_DIR}/utilities/sendMessage.sh -l bad -m \"Error running IBM Security Static Analyzer. Check the <${DRA_REPORT_URL}|Deployment Risk Analytics> decision report\"
+        fi
         end_script_time
         exit 1
     else
         echo -e \"${green}Application scan was successful ${no_color}\"
+        if [ $DRA_ENABLED -eq 0 ]; then
+            ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"Application scan was successful. Check the <${DRA_REPORT_URL}|Deployment Risk Analytics> decision report\"
+        fi
     fi  
 else 
     echo -e \"${red}IBM Security Static Analyzer helper script not available, failed.${no_color}\"

@@ -6,7 +6,7 @@
 	"rules":
 	[
 		{
-			"name": "StaticSecurityScasnAnalysis ",
+			"name": "StaticSecurityScasnAnalysis",
 			"mode": "advisory",
 			"conditions":
 			[
