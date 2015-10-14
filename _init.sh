@@ -212,10 +212,16 @@ cd $EXT_DIR
 git clone https://github.com/Osthanes/utilities.git utilities
 export PYTHONPATH=$EXT_DIR/utilities:$PYTHONPATH
 popd >/dev/null
-# enable logging to logmet
-source $EXT_DIR/utilities/logging_utils.sh
-setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}" "${BLUEMIX_SPACE}" "${BLUEMIX_ORG}" "${BLUEMIX_TARGET}"
 
+############################
+# enable logging to logmet #
+############################
+source $EXT_DIR/utilities/logging_utils.sh
+setup_met_logging "${BLUEMIX_USER}" "${BLUEMIX_PASSWORD}"
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+    log_and_echo "$WARN" "LOGMET setup failed with return code ${RESULT}"
+fi
 
 ###############
 # setup appscan
@@ -260,7 +266,9 @@ export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$APPSCAN_NSTALL_DIR/bin:$LD_LIBRARY_PATH
 debugme appscan.sh version
 
-# initialize DRA
+############################
+# enable DRA               #
+############################
 source $EXT_DIR/utilities/dra_utils.sh
 export DRA_ENABLED=1
 export CRITERIAL_NAME="appscan_criteria"
