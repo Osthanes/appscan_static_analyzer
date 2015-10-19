@@ -158,6 +158,7 @@ log_and_echo "$SUCCESSFUL" "Successfully installed Cloud Foundry CLI"
 ##########################################
 # attempt to  target env automatically
 CF_API=`cf api`
+debugme echo "CF_API: ${CF_API}"
 if [ $? -eq 0 ]; then
     # find the bluemix api host
     export BLUEMIX_API_HOST=`echo $CF_API  | awk '{print $3}' | sed '0,/.*\/\//s///'`
@@ -165,9 +166,11 @@ if [ $? -eq 0 ]; then
     if [ $? -eq 0 ]; then
         # on staging, make sure bm target is set for staging
         export BLUEMIX_TARGET="staging"
+        export BLUEMIX_API_HOST="api.stage1.ng.bluemix.net"
     else
         # on prod, make sure bm target is set for prod
         export BLUEMIX_TARGET="prod"
+        export BLUEMIX_API_HOST="api.ng.bluemix.net"
     fi
 elif [ -n "$BLUEMIX_TARGET" ]; then
     # cf not setup yet, try manual setup
