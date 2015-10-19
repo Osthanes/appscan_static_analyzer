@@ -53,14 +53,14 @@ if [[ $DEBUG -eq 1 ]]; then
 fi
 INIT_END_TIME=$(date +\"%s\")
 export INIT_EST_TIME=$(($INIT_END_TIME-$INIT_START_TIME))
-echo -e \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
-echo -e \"${label_color}Starting build script${no_color}\"
+log_and_echo \"$INFO\" \"Init runtime of `date -u -d @\"$INIT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+log_and_echo \"$INFO\" \"Starting test script\"
 
 # helper function to print the end time for this script
 end_script_time() {
     SCRIPT_END_TIME=$(date +\"%s\")
     SCRIPT_EST_TIME=$(($SCRIPT_END_TIME-$INIT_END_TIME))
-    echo -e \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
+    log_and_echo \"$INFO\" \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 }
 
 # run the python IBM Security Static Analyzer checker, dump results on output
@@ -71,34 +71,35 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     # add the appscan result json file to DRA
     if [ $DRA_ENABLED -eq 0 ]; then
         RESULT_FILE=\"appscan-result.json\"
+        EVENT_TYPE=\"SecurityScan.json\"
         if [ -e \"$RESULT_FILE\" ]; then
-            add_result_rule_to_dra \"${RESULT_FILE}\"
+            add_result_rule_to_dra \"${RESULT_FILE}\" \"${EVENT_TYPE}\"
             RC=$?
             if [ $RC -eq 0 ]; then
-                echo -e \"${green}Request DRA decision for ${CRITERIAL_NAME}.${no_color}\"
+                log_and_echo \"$SUCCESSFUL\" \"Request DRA decision for ${CRITERIAL_NAME}.\"
                 dra_grunt_decision \"${CRITERIAL_NAME}\"
                 RC=$?
                 if [ $RC -eq 0 ]; then
-                    echo -e \"${green}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                    log_and_echo \"$SUCCESSFUL\" \"DRA Decision result is '${DRA_DECISION}'\"
                 elif [ $RC -eq 1 ]; then
-                    echo -e \"${label_color}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                    log_and_echo \"$LABEL\" \"DRA Decision result is '${DRA_DECISION}'\"
                 elif [ $RC -eq 2 ]; then
-                    echo -e \"${red}DRA Decision result is '${DRA_DECISION}' ${no_color}\"
+                    log_and_echo \"$ERROR\" \"DRA Decision result is '${DRA_DECISION}'\"
                 else
-                    echo -e \"${label_color}Failed to execute decision for criterial ${CRITERIAL_NAME} with return error code ${RC}.${no_color}\"
+                    log_and_echo \"$ERROR\" \"Failed to execute decision for criterial ${CRITERIAL_NAME} with return error code ${RC}.\"
                 fi
             else
-                echo -e \"${label_color}Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.${no_color}\"
+                log_and_echo \"$ERROR\" \"Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.\"
             fi
         else
-            echo -e \"${label_color}Failed to get result rule file ${RESULT_FILE}.${no_color}\"
+            log_and_echo \"$ERROR\" \"Failed to get result rule file ${RESULT_FILE}.\"
         fi
     fi
 
     if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
-        echo \"Achive directory, is the working directory\"
+        log_and_echo \"$INFO\" \"Achive directory is the working directory\"
     else 
-        echo \"Archive directory, is ${ARCHIVE_DIR}.  Copy all content to that directory\"
+        log_and_echo \"$INFO\" \"Archive directory is $ARCHIVE_DIR - copying all content to that directory\"
         pushd ${WORKSPACE} &> /dev/null
         # also copy .git metadata
         if [ -d .git ]; then
@@ -114,14 +115,15 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     fi 
 
     if [ $RESULT -ne 0 ]; then
-        echo -e \"${red}Error running IBM Security Static Analyzer ${no_color}\"
+        log_and_echo \"$ERROR\" \"Error running IBM Security Static Analyzer\"
         end_script_time
         exit 1
     else
-        echo -e \"${green}Application scan was successful ${no_color}\"
+        log_and_echo \"$SUCCESSFUL\" \"Application scan was successful\"
     fi  
 else 
-    echo -e \"${red}IBM Security Static Analyzer helper script not available, failed.${no_color}\"
+    log_and_echo \"$ERROR\" \"IBM Security Static Analyzer helper script not available, failed.\"
+    ${EXT_DIR}/utilities/sendMessage.sh -l good -m \"IBM Security Static Analyzer helper script not available, failed.\"
     end_script_time
     exit 1
 fi  
