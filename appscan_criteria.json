@@ -26,6 +26,12 @@
 					"eval": "filecontents.medium_issue_count",
 					"op": "<",
 					"value": 2
+				},
+
+				{
+					"eval": "eventType",
+					"op": "=",
+					"value": "SecurityScan"
 				}
 			]
 		}
