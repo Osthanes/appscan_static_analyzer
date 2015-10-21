@@ -71,7 +71,7 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
     # add the appscan result json file to DRA
     if [ $DRA_ENABLED -eq 0 ]; then
         RESULT_FILE=\"appscan-result.json\"
-        EVENT_TYPE=\"SecurityScan.json\"
+        EVENT_TYPE=\"SecurityScan\"
         if [ -e \"$RESULT_FILE\" ]; then
             add_result_rule_to_dra \"${RESULT_FILE}\" \"${EVENT_TYPE}\"
             RC=$?
