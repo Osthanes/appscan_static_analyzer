@@ -640,6 +640,9 @@ def wait_for_scans (joblist):
                         print "\tInfo Severity Issues   : " + str(results["NInfoIssues"])
                         if dash != None:
                             print "See detailed results at: " + python_utils.LABEL_COLOR + " " + dash
+                            f = open("result_url","w")
+                            f.write(dash)
+                            f.close()
                         print python_utils.LABEL_GREEN + python_utils.STARS + python_utils.LABEL_NO_COLOR
 
                         # append results to the jobResults for the json format
@@ -674,6 +677,9 @@ def wait_for_scans (joblist):
                         print "\t" + str(results["Progress"]) + "% complete"
                         if dash != None:
                             print "Track current state and results at: " + python_utils.LABEL_COLOR + " " + dash
+                            f = open("result_url","w")
+                            f.write(dash)
+                            f.close()
                         print python_utils.LABEL_RED + "Increase the time to wait and rerun this job. The existing analysis will continue and be found and tracked."
                         print python_utils.STARS + python_utils.LABEL_NO_COLOR
 
