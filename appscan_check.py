@@ -704,7 +704,6 @@ def wait_for_scans (joblist):
     appscan_result_file = './appscan-result.json'
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
-    python_utils.LOGGER.info(open(appscan_result_file,"rb").read())
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
