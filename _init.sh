@@ -312,8 +312,9 @@ debugme appscan.sh version
 ############################
 source $EXT_DIR/utilities/dra_utils.sh
 export DRA_ENABLED=1
-export CRITERIAL_NAME="appscan_criteria"
+export CRITERIAL_NAME="appscan_criterial"
 setup_dra "${CRITERIAL_NAME}"
+RESULT=$?
 if [ $RESULT -eq 0 ]; then
     log_and_echo "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
 elif [ $RESULT -gt 1 ]; then
