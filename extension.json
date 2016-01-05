@@ -65,7 +65,11 @@ end_script_time() {
 
 # run the python IBM Security Static Analyzer checker, dump results on output
 if [ -f ${EXT_DIR}/appscan_check.py ]; then 
-    ${EXT_DIR}/appscan_check.py
+    if [[ $DEBUG -eq 1 ]]; then
+       ${EXT_DIR}/appscan_check.py --debug
+    else
+       ${EXT_DIR}/appscan_check.py
+    fi
     RESULT=$?
 
     if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
