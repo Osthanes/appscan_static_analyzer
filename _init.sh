@@ -94,7 +94,7 @@ sudo dpkg --add-architecture i386
 sudo apt-get update >/dev/null 2>&1
 debugme echo "installing i386 java"
 sudo apt-get install -y openjdk-7-jre:i386
-export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
 debugme echo "JAVA_HOME=${JAVA_HOME}"
 debugme echo "installing bc"
 sudo apt-get install -y bc >/dev/null 2>&1
