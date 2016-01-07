@@ -90,10 +90,10 @@ fi
 
 # install necessary features
 debugme echo "enabling i386 architechture"
-sudo dpkg --add-architecture i386 
+sudo dpkg --add-architecture i386 >/dev/null 2>&1
 sudo apt-get update >/dev/null 2>&1
 debugme echo "installing i386 java"
-sudo apt-get install -y openjdk-7-jre:i386
+sudo apt-get install -y openjdk-7-jre:i386 >/dev/null 2>&1
 export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
 debugme echo "JAVA_HOME=${JAVA_HOME}"
 debugme echo "installing bc"
