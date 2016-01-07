@@ -60,8 +60,13 @@ if [ -z "$APPLICATION_VERSION" ]; then
 fi 
 
 # install necessary features
+debugme echo "enabling i386 architechture"
+sudo dpkg --add-architecture i386 
+sudo apt-get update >/dev/null 2>&1
+debugme echo "installing i386 java"
+sudo apt-get install -y openjdk-7-jre:i386
 debugme echo "installing bc"
-sudo apt-get install bc >/dev/null 2>&1
+sudo apt-get install -y bc >/dev/null 2>&1
 debugme echo "installing 32 bit libs"
 sudo apt-get install -y libc6-i386 lib32stdc++6 >/dev/null 2>&1
 debugme echo "installing unzip"
@@ -244,6 +249,7 @@ else
     #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
     export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
 fi
+
 # fetch the current version of utils
 cur_dir=`pwd`
 cd ${EXT_DIR}
