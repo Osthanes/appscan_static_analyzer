@@ -27,8 +27,8 @@ from datetime import datetime
 from subprocess import call, Popen, PIPE
 import python_utils
 
-STATIC_ANALYSIS_SERVICE='Static Analyzer'
-DEFAULT_SERVICE=STATIC_ANALYSIS_SERVICE
+APP_SECURITY_SERVICE='Application Security on Cloud'
+DEFAULT_SERVICE=APP_SECURITY_SERVICE
 DEFAULT_SERVICE_PLAN="free"
 DEFAULT_SERVICE_NAME=DEFAULT_SERVICE
 DEFAULT_SCANNAME="staticscan"
@@ -618,7 +618,7 @@ def wait_for_scans (joblist):
     # number of high sev issues in completed jobs
     high_issue_count = 0
     med_issue_count=0
-    dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+    dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
     for jobid in joblist:
         try:
             while True:
@@ -731,7 +731,7 @@ try:
     
     python_utils.WAIT_TIME = python_utils.get_remaining_wait_time(first = True)
     python_utils.LOGGER.info("Getting credentials for Static Analysis service")
-    creds = python_utils.get_credentials_from_bound_app(service=STATIC_ANALYSIS_SERVICE)
+    creds = python_utils.get_credentials_for_non_binding_service(service=APP_SECURITY_SERVICE)
     python_utils.LOGGER.info("Connecting to Static Analysis service")
     appscan_login(creds['bindingid'],creds['password'])
 
@@ -788,7 +788,7 @@ try:
     if not all_jobs_complete:
         # send slack notification 
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
-            dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+            dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
             command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=python_utils.EXT_DIR,url=dash,wait=python_utils.FULL_WAIT_TIME)
             proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
             out, err = proc.communicate();
@@ -801,7 +801,7 @@ try:
         if high_issue_count > 0:
             # send slack notification 
             if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
-                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=python_utils.EXT_DIR,url=dash, issues=high_issue_count)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
@@ -813,13 +813,13 @@ try:
 
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
             if med_issue_count > 0: 
-                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
                 python_utils.LOGGER.debug(out)
             else:            
-                dash = python_utils.find_service_dashboard(STATIC_ANALYSIS_SERVICE)
+                dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
