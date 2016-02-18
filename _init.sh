@@ -90,7 +90,8 @@ fi
 
 # install necessary features
 log_and_echo "$INFO" "Setting up prerequisites for IBM Security Static Analyzer.  This will likely take several minutes"
-debugme echo "enabling i386 architechture"
+debugme echo "enabling i686 architechture"
+sudo dpkg --add-architecture i686 >/dev/null 2>&1
 sudo dpkg --add-architecture i386 >/dev/null 2>&1
 sudo apt-get update >/dev/null 2>&1
 debugme echo "installing i386 java"
@@ -100,7 +101,7 @@ debugme echo "JAVA_HOME=${JAVA_HOME}"
 debugme echo "installing bc"
 sudo apt-get install -y bc >/dev/null 2>&1
 debugme echo "installing 32 bit libs"
-sudo apt-get install -y libc6-i386 lib32stdc++6 >/dev/null 2>&1
+sudo apt-get install -y libc6-i686 g++-multilib >/dev/null 2>&1
 debugme echo "installing unzip"
 sudo apt-get install -y unzip >/dev/null 2>&1
 debugme echo "done installing prereqs"
