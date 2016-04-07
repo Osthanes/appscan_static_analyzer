@@ -286,31 +286,35 @@ if [ -n "$BLUEMIX_TARGET" ]; then
         export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan-test.bluemix.net
     elif [ "$BLUEMIX_TARGET" == "prod" ]; then 
         # prod
-        export APPSCAN_ENV=https://appscan.ibmcloud.com
-        #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
-        export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
+        export APPSCAN_ENV=https://appscan.bluemix.net
+        #export APPSCAN_DOMAIN=https://appscan.bluemix.net
+        export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.bluemix.net
     else 
         # unknown, setup for prod
-        export APPSCAN_ENV=https://appscan.ibmcloud.com
-        #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
-        export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
+        export APPSCAN_ENV=https://appscan.bluemix.net
+        #export APPSCAN_DOMAIN=https://appscan.bluemix.net
+        export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.bluemix.net
     fi 
 else 
     # none set, set for prod
-    export APPSCAN_ENV=https://appscan.ibmcloud.com
-    #export APPSCAN_DOMAIN=https://appscan.ibmcloud.com
-    export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.ibmcloud.com
+    export APPSCAN_ENV=https://appscan.bluemix.net
+    #export APPSCAN_DOMAIN=https://appscan.bluemix.net
+    export APPSCAN_OPTS=-DBLUEMIX_SERVER=https://appscan.bluemix.net
 fi
 
 # fetch the current version of utils
 cur_dir=`pwd`
 cd ${EXT_DIR}
-#wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
-#unzip -o -qq SAClientUtil.zip &>/dev/null
-#if [ $? -eq 9 ]; then
-#    debugme echo "Unable to download SAClient, using local copy"
+if [[ $FORCE_NEWEST_API = 1 ]]; then
+    wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
+    unzip -o -qq SAClientUtil.zip &>/dev/null
+    if [ $? -eq 9 ]; then
+        debugme echo "Unable to download SAClient, using local copy"
+        unzip -o -qq SAClientLocal.zip
+    fi
+else
     unzip -o -qq SAClientLocal.zip
-    #fi
+fi
 cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
 cd $cur_dir
