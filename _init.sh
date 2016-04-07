@@ -305,7 +305,9 @@ fi
 # fetch the current version of utils
 cur_dir=`pwd`
 cd ${EXT_DIR}
-if [[ $FORCE_NEWEST_API = 1 ]]; then
+#CLI currently in extension is outdated, so for now always force download
+FORCE_NEWEST_CLI=1
+if [[ $FORCE_NEWEST_CLI = 1 ]]; then
     wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
     unzip -o -qq SAClientUtil.zip &>/dev/null
     if [ $? -eq 9 ]; then
