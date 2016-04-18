@@ -218,6 +218,7 @@ def appscan_list ():
     return scanlist
 
 # translate a job state to a pretty name
+# CLI now returns the string, keeping in case needed later and to have a list of possible stages
 def get_state_name (state):
     return {
         0 : "Pending",
@@ -236,6 +237,25 @@ def get_state_name (state):
         13 : "PossibleMissingConfiguration"
     }.get(state, "Unknown")
 
+# translate a job state from a name to a number
+def get_state_num (state):
+    return {
+        "pending" : 0,
+        "starting" : 1,
+        "running" : 2,
+        "finishedrunning" : 3,
+        "finishedrunningwitherrors" : 4,
+        "pendingsupport" : 5,
+        "ready" : 6,
+        "readyincomplete" : 7,
+        "failedtoscan" : 8,
+        "manuallystopped" : 9,
+        "none" : 10,
+        "initiating" : 11,
+        "missingconfiguration" : 12,
+        "possiblemissingconfiguration" : 13
+    }.get(state.lower(), 14)
+
 # given a state, is the job completed
 def get_state_completed (state):
     return {
@@ -253,7 +273,7 @@ def get_state_completed (state):
         11 : False,
         12 : True,
         13 : True
-    }.get(state, True)
+    }.get(get_state_num(state), True)
 
 # given a state, was it completed successfully
 def get_state_successful (state):
@@ -272,7 +292,7 @@ def get_state_successful (state):
         11 : False,
         12 : False,
         13 : False
-    }.get(state, False)
+    }.get(get_state_num(state), False)
 
 # get status of a given job
 def appscan_status (jobid):
@@ -288,13 +308,7 @@ def appscan_status (jobid):
             python_utils.LOGGER.debug("error getting status: " + str(err))
         raise Exception("Invalid jobid")
 
-    retval = 0
-    try:
-        retval = int(out)
-    except ValueError:
-        if python_utils.DEBUG:
-            python_utils.LOGGER.debug("error getting status, converting val: " + str(out))
-        raise Exception("Invalid jobid")
+    retval = str(out)
 
     return retval
 
@@ -623,7 +637,7 @@ def wait_for_scans (joblist):
         try:
             while True:
                 state = appscan_status(jobid)
-                python_utils.LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
+                python_utils.LOGGER.info("Job " + str(jobid) + " in state " + state)
                 if get_state_completed(state):
                     results = appscan_info(jobid)
                     if get_state_successful(state):
