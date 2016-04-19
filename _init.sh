@@ -320,6 +320,9 @@ else
 fi
 cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
+if [[ $OVERWRITE_APPSCAN_SH = 1 ]]; then
+    cp ../appscan.sh bin/appscan.sh
+fi
 cd $cur_dir
 export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$APPSCAN_NSTALL_DIR/bin:$LD_LIBRARY_PATH
