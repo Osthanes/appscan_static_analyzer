@@ -327,7 +327,8 @@ if [[ $DEBUG = 1 ]]; then
     cd jre/bin
     pwd
     ls -la
-    chmod +x java
+    chmod 777 java
+    ls -la
     ./java -version
 fi
 cd $cur_dir
