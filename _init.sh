@@ -90,9 +90,9 @@ fi
 
 # install necessary features
 log_and_echo "$INFO" "Setting up prerequisites for IBM Security Static Analyzer.  This will likely take several minutes"
-#debugme echo "enabling i686 architechture"
-#sudo dpkg --add-architecture i686 >/dev/null 2>&1
-#sudo dpkg --add-architecture i386 >/dev/null 2>&1
+debugme echo "enabling i686 architechture"
+sudo dpkg --add-architecture i686 >/dev/null 2>&1
+sudo dpkg --add-architecture i386 >/dev/null 2>&1
 #sudo apt-get update >/dev/null 2>&1-debugme echo "installing i386 java"
 #sudo apt-get install -y openjdk-7-jre:i386 >/dev/null 2>&1
 #export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
