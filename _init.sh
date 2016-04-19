@@ -324,7 +324,9 @@ if [[ $OVERWRITE_APPSCAN_SH = 1 ]]; then
     cp ../appscan.sh bin/appscan.sh
 fi
 if [[ $DEBUG = 1 ]]; then
-    cd jre/bin
+    cd jre
+    JAVA_HOME=`pwd`
+    cd bin
     pwd
     ls -la
     chmod 777 java
