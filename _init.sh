@@ -327,6 +327,7 @@ if [[ $DEBUG = 1 ]]; then
     cd jre/bin
     pwd
     ls -la
+    ./java -version
 fi
 cd $cur_dir
 export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
