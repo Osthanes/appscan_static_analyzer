@@ -93,7 +93,8 @@ log_and_echo "$INFO" "Setting up prerequisites for IBM Security Static Analyzer.
 debugme echo "enabling i686 architechture"
 sudo dpkg --add-architecture i686 >/dev/null 2>&1
 sudo dpkg --add-architecture i386 >/dev/null 2>&1
-sudo apt-get update >/dev/null 2>&1-debugme echo "installing i386 java"
+sudo apt-get update >/dev/null 2>&1
+debugme echo "installing i386 java"
 sudo apt-get install -y openjdk-8-jre:i386
 #export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
 #debugme echo "JAVA_HOME=${JAVA_HOME}"
