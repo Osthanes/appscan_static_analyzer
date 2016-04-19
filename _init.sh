@@ -94,7 +94,7 @@ debugme echo "enabling i686 architechture"
 sudo dpkg --add-architecture i686 >/dev/null 2>&1
 sudo dpkg --add-architecture i386 >/dev/null 2>&1
 sudo apt-get update >/dev/null 2>&1-debugme echo "installing i386 java"
-sudo apt-get install -y openjdk-7-jre:i386
+sudo apt-get install -y openjdk-8-jre:i386
 #export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
 #debugme echo "JAVA_HOME=${JAVA_HOME}"
 #CLI includes 32-bit java, so we shouldn't need to do the above
