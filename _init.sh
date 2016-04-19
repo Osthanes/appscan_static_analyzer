@@ -310,7 +310,7 @@ cd ${EXT_DIR}
 FORCE_NEWEST_CLI=1
 if [[ $FORCE_NEWEST_CLI = 1 ]]; then
     wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
-    unzip -o -qq SAClientUtil.zip &>/dev/null
+    unzip -o -qq SAClientUtil.zip
     if [ $? -eq 9 ]; then
         debugme echo "Unable to download SAClient"
         exit 1
@@ -322,6 +322,11 @@ cd `ls -d SAClient*/`
 export APPSCAN_INSTALL_DIR=`pwd`
 if [[ $OVERWRITE_APPSCAN_SH = 1 ]]; then
     cp ../appscan.sh bin/appscan.sh
+fi
+if [[ $DEBUG = 1 ]]; then
+    cd jre/bin
+    pwd
+    ls -la
 fi
 cd $cur_dir
 export PATH=$APPSCAN_INSTALL_DIR/bin:$PATH
