@@ -242,7 +242,7 @@ def get_state_name (state):
 # translate a job state from a name to a number
 def get_state_num (state):
     python_utils.LOGGER.debug("getting number for state: "+str(state))
-    return {
+    val = {
         "pending" : 0,
         "starting" : 1,
         "running" : 2,
@@ -258,6 +258,8 @@ def get_state_num (state):
         "missingconfiguration" : 12,
         "possiblemissingconfiguration" : 13
     }.get(state.lower(), 14)
+    python_utils.LOGGER.debug("   "+str(val))
+    return val
 
 # given a state, is the job completed
 def get_state_completed (state):
