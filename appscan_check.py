@@ -178,6 +178,7 @@ def appscan_submit (filelist):
 
         transf_found = False
         for line in out.splitlines() :
+            python_utils.LOGGER.debug("Submit response line: " + line)
             if "100% transferred" in line:
                 # done transferring
                 transf_found = True
@@ -632,6 +633,7 @@ def wait_for_scans (joblist):
     # number of high sev issues in completed jobs
     high_issue_count = 0
     med_issue_count=0
+    python_utils.LOGGER.debug("Waiting for joblist: "+str(joblist))
     dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
     for jobid in joblist:
         try:
