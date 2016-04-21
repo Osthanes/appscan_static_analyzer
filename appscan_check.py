@@ -241,6 +241,7 @@ def get_state_name (state):
 
 # translate a job state from a name to a number
 def get_state_num (state):
+    python_utils.LOGGER.debug("getting number for state: "+str(state))
     return {
         "pending" : 0,
         "starting" : 1,
@@ -558,6 +559,7 @@ def check_for_existing_job ( ignore_older_jobs = True):
     found = False
     for jobid in alljobs:
         results = appscan_info(jobid)
+        python_utils.LOGGER.debug("Results for "+jobid+": "+ str(results))
         if results["Name"].startswith(job_name):
             joblist.append(jobid)
             found = True
