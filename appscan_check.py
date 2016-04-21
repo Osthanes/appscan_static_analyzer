@@ -783,13 +783,13 @@ try:
             joblist = appscan_submit(files_to_submit)
             if (not joblist) or len(joblist) < len(files_to_submit):
                 #Error, we didn't return as many jobs as we should have
-                python_utils.LOGGER.error("ERROR: could not successfully submit scan.  Check status of existing scans")
+                dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
-                    dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                     command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> could not successfully submit scan.  Check status of existing scans\"'.format(path=python_utils.EXT_DIR,url=dash)
                     proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                     out, err = proc.communicate();
                     python_utils.LOGGER.debug(out)
+                python_utils.LOGGER.error('ERROR: could not successfully submit scan.  Check status of existing scans. {url}'.format(url=dash))
                 endtime = timeit.default_timer()
                 print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
                 sys.exit(4)
