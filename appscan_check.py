@@ -208,6 +208,7 @@ def appscan_list ():
     for line in out.splitlines() :
         if "No analysis jobs" in line:
             # no jobs, return empty list
+            python_utils.LOGGER.debug("No analysis jobs found")
             return []
         elif line:
             # done, if line isn't empty, is an id
@@ -215,7 +216,7 @@ def appscan_list ():
         else:
             # empty line, skip it
             continue
-
+    python_utils.LOGGER.debug("Analysis jobs found: " + str(scanlist))
     return scanlist
 
 # translate a job state to a pretty name
