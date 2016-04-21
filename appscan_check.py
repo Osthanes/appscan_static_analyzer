@@ -241,7 +241,6 @@ def get_state_name (state):
 
 # translate a job state from a name to a number
 def get_state_num (state):
-    python_utils.LOGGER.debug("getting number for state: "+str(state))
     val = {
         "pending" : 0,
         "starting" : 1,
@@ -258,7 +257,7 @@ def get_state_num (state):
         "missingconfiguration" : 12,
         "possiblemissingconfiguration" : 13
     }.get(state.lower().strip(), 14)
-    python_utils.LOGGER.debug("   "+str(val))
+    python_utils.LOGGER.debug("Getting number for state: \""+str(state)+"\" ("+str(val)+")")
     return val
 
 # given a state, is the job completed
@@ -782,6 +781,18 @@ try:
             files_to_submit = appscan_prepare()
             python_utils.LOGGER.info("Submitting scans for analysis")
             joblist = appscan_submit(files_to_submit)
+            if (not joblist) or len(joblist) < len(files_to_submit):
+                #Error, we didn't return as many jobs as we should have
+                python_utils.LOGGER.error("ERROR: could not successfully submit scan.  Check status of existing scans")
+                if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
+                    dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
+                    command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> could not successfully submit scan.  Check status of existing scans\"'.format(path=python_utils.EXT_DIR,url=dash)
+                    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+                    out, err = proc.communicate();
+                    python_utils.LOGGER.debug(out)
+                endtime = timeit.default_timer()
+                print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
+                sys.exit(4)
             python_utils.LOGGER.info("Waiting for analysis to complete")
         else:
             python_utils.LOGGER.info("Existing job found, connecting")
