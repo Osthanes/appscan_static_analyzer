@@ -257,7 +257,7 @@ def get_state_num (state):
         "initiating" : 11,
         "missingconfiguration" : 12,
         "possiblemissingconfiguration" : 13
-    }.get(state.lower(), 14)
+    }.get(state.lower().strip(), 14)
     python_utils.LOGGER.debug("   "+str(val))
     return val
 
