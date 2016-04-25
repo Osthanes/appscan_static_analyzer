@@ -307,7 +307,7 @@ if [[ $FORCE_NEWEST_CLI = 1 ]]; then
     wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
     unzip -o -qq SAClientUtil.zip
     if [ $? -eq 9 ]; then
-        debugme echo "Unable to download SAClient"
+        log_and_echo "$ERROR" "Unable to download SAClient"
         exit 1
     fi
 else
