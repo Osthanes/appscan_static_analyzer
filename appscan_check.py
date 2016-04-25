@@ -178,6 +178,7 @@ def appscan_submit (filelist):
 
         transf_found = False
         for line in out.splitlines() :
+            python_utils.LOGGER.debug("Submit response line: " + line)
             if "100% transferred" in line:
                 # done transferring
                 transf_found = True
@@ -207,6 +208,7 @@ def appscan_list ():
     for line in out.splitlines() :
         if "No analysis jobs" in line:
             # no jobs, return empty list
+            python_utils.LOGGER.debug("No analysis jobs found")
             return []
         elif line:
             # done, if line isn't empty, is an id
@@ -214,10 +216,11 @@ def appscan_list ():
         else:
             # empty line, skip it
             continue
-
+    python_utils.LOGGER.debug("Analysis jobs found: " + str(scanlist))
     return scanlist
 
 # translate a job state to a pretty name
+# CLI now returns the string, keeping in case needed later and to have a list of possible stages
 def get_state_name (state):
     return {
         0 : "Pending",
@@ -236,6 +239,27 @@ def get_state_name (state):
         13 : "PossibleMissingConfiguration"
     }.get(state, "Unknown")
 
+# translate a job state from a name to a number
+def get_state_num (state):
+    val = {
+        "pending" : 0,
+        "starting" : 1,
+        "running" : 2,
+        "finishedrunning" : 3,
+        "finishedrunningwitherrors" : 4,
+        "pendingsupport" : 5,
+        "ready" : 6,
+        "readyincomplete" : 7,
+        "failedtoscan" : 8,
+        "manuallystopped" : 9,
+        "none" : 10,
+        "initiating" : 11,
+        "missingconfiguration" : 12,
+        "possiblemissingconfiguration" : 13
+    }.get(state.lower().strip(), 14)
+    python_utils.LOGGER.debug("Getting number for state: \""+str(state)+"\" ("+str(val)+")")
+    return val
+
 # given a state, is the job completed
 def get_state_completed (state):
     return {
@@ -253,7 +277,7 @@ def get_state_completed (state):
         11 : False,
         12 : True,
         13 : True
-    }.get(state, True)
+    }.get(get_state_num(state), True)
 
 # given a state, was it completed successfully
 def get_state_successful (state):
@@ -272,7 +296,7 @@ def get_state_successful (state):
         11 : False,
         12 : False,
         13 : False
-    }.get(state, False)
+    }.get(get_state_num(state), False)
 
 # get status of a given job
 def appscan_status (jobid):
@@ -288,13 +312,7 @@ def appscan_status (jobid):
             python_utils.LOGGER.debug("error getting status: " + str(err))
         raise Exception("Invalid jobid")
 
-    retval = 0
-    try:
-        retval = int(out)
-    except ValueError:
-        if python_utils.DEBUG:
-            python_utils.LOGGER.debug("error getting status, converting val: " + str(out))
-        raise Exception("Invalid jobid")
+    retval = str(out)
 
     return retval
 
@@ -542,6 +560,7 @@ def check_for_existing_job ( ignore_older_jobs = True):
     found = False
     for jobid in alljobs:
         results = appscan_info(jobid)
+        python_utils.LOGGER.debug("Results for "+jobid+": "+ str(results))
         if results["Name"].startswith(job_name):
             joblist.append(jobid)
             found = True
@@ -618,12 +637,13 @@ def wait_for_scans (joblist):
     # number of high sev issues in completed jobs
     high_issue_count = 0
     med_issue_count=0
+    python_utils.LOGGER.debug("Waiting for joblist: "+str(joblist))
     dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
     for jobid in joblist:
         try:
             while True:
                 state = appscan_status(jobid)
-                python_utils.LOGGER.info("Job " + str(jobid) + " in state " + get_state_name(state))
+                python_utils.LOGGER.info("Job " + str(jobid) + " in state " + state)
                 if get_state_completed(state):
                     results = appscan_info(jobid)
                     if get_state_successful(state):
@@ -761,6 +781,18 @@ try:
             files_to_submit = appscan_prepare()
             python_utils.LOGGER.info("Submitting scans for analysis")
             joblist = appscan_submit(files_to_submit)
+            if (not joblist) or len(joblist) < len(files_to_submit):
+                #Error, we didn't return as many jobs as we should have
+                dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
+                if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
+                    command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> could not successfully submit scan.  Check status of existing scans\"'.format(path=python_utils.EXT_DIR,url=dash)
+                    proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
+                    out, err = proc.communicate();
+                    python_utils.LOGGER.debug(out)
+                python_utils.LOGGER.error('ERROR: could not successfully submit scan.  Check status of existing scans. {url}'.format(url=dash))
+                endtime = timeit.default_timer()
+                print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
+                sys.exit(4)
             python_utils.LOGGER.info("Waiting for analysis to complete")
         else:
             python_utils.LOGGER.info("Existing job found, connecting")

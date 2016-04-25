@@ -90,18 +90,14 @@ fi
 
 # install necessary features
 log_and_echo "$INFO" "Setting up prerequisites for IBM Security Static Analyzer.  This will likely take several minutes"
-debugme echo "enabling i686 architechture"
-sudo dpkg --add-architecture i686 >/dev/null 2>&1
+debugme echo "enabling i386 architechture"
 sudo dpkg --add-architecture i386 >/dev/null 2>&1
 sudo apt-get update >/dev/null 2>&1
-debugme echo "installing i386 java"
-sudo apt-get install -y openjdk-7-jre:i386 >/dev/null 2>&1
-export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
-debugme echo "JAVA_HOME=${JAVA_HOME}"
+debugme echo "installing i386 libraries"
+sudo apt-get install -y libc6:i386 libc6-i686 g++-multilib >/dev/null 2>&1
+
 debugme echo "installing bc"
 sudo apt-get install -y bc >/dev/null 2>&1
-debugme echo "installing 32 bit libs"
-sudo apt-get install -y libc6-i686 g++-multilib >/dev/null 2>&1
 debugme echo "installing unzip"
 sudo apt-get install -y unzip >/dev/null 2>&1
 debugme echo "done installing prereqs"
@@ -305,14 +301,14 @@ fi
 # fetch the current version of utils
 cur_dir=`pwd`
 cd ${EXT_DIR}
-#CLI currently in extension is outdated, so for now always force download
+#CLI is too large for extension, so always download, fail if can't
 FORCE_NEWEST_CLI=1
 if [[ $FORCE_NEWEST_CLI = 1 ]]; then
     wget ${APPSCAN_ENV}/api/BlueMix/StaticAnalyzer/SAClientUtil?os=linux -O SAClientUtil.zip -o /dev/null
-    unzip -o -qq SAClientUtil.zip &>/dev/null
+    unzip -o -qq SAClientUtil.zip
     if [ $? -eq 9 ]; then
-        debugme echo "Unable to download SAClient, using local copy"
-        unzip -o -qq SAClientLocal.zip
+        log_and_echo "$ERROR" "Unable to download SAClient"
+        exit 1
     fi
 else
     unzip -o -qq SAClientLocal.zip
