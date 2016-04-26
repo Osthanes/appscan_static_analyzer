@@ -192,9 +192,9 @@ def appscan_submit (filelist):
             else:
                 # empty line, skip it
                 continue
-
+        if err:
+            python_utils.LOGGER.warning("Submit error response: " + str(err))
         index = index + 1
-
     return scanlist
 
 
