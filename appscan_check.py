@@ -607,7 +607,7 @@ def cleanup_old_jobs ():
                 # found right place
                 if python_utils.DEBUG:
                     python_utils.LOGGER.debug("Insert job " + str(results['Name']) + " at index " + str(i) + " for timestamp " + str(results['CreatedAt']))
-                s_jobs[i:i] = results
+                s_jobs.insert(i, results)
                 break
             i += 1
         if i==len(s_jobs):
