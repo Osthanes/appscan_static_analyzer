@@ -63,6 +63,13 @@ end_script_time() {
     log_and_echo \"$INFO\" \"Script runtime of `date -u -d @\"$SCRIPT_EST_TIME\" +\'%-Mm %-Ss\'`\"
 }
 
+# Calls OTC api to determine if DRA is present.
+callOpenToolchainAPI
+
+if [ $DRA_IS_PRESENT -eq 1 ]; then
+    installDRADependencies
+fi
+
 # run the python IBM Security Static Analyzer checker, dump results on output
 if [ -f ${EXT_DIR}/appscan_check.py ]; then 
     if [[ $DEBUG -eq 1 ]]; then
@@ -71,34 +78,6 @@ if [ -f ${EXT_DIR}/appscan_check.py ]; then
        ${EXT_DIR}/appscan_check.py
     fi
     RESULT=$?
-
-    # add the appscan result json file to DRA
-    if [ $DRA_ENABLED -eq 0 ]; then
-        RESULT_FILE=\"appscan-result.json\"
-        EVENT_TYPE=\"SecurityScan\"
-        if [ -e \"$RESULT_FILE\" ]; then
-            add_result_rule_to_dra \"${RESULT_FILE}\" \"${EVENT_TYPE}\"
-            RC=$?
-            if [ $RC -eq 0 ]; then
-                log_and_echo \"$SUCCESSFUL\" \"Request DRA decision for ${CRITERIAL_NAME}.\"
-                dra_grunt_decision \"${CRITERIAL_NAME}\"
-                RC=$?
-                if [ $RC -eq 0 ]; then
-                    log_and_echo \"$SUCCESSFUL\" \"DRA Decision result is '${DRA_DECISION}'\"
-                elif [ $RC -eq 1 ]; then
-                    log_and_echo \"$LABEL\" \"DRA Decision result is '${DRA_DECISION}'\"
-                elif [ $RC -eq 2 ]; then
-                    log_and_echo \"$ERROR\" \"DRA Decision result is '${DRA_DECISION}'\"
-                else
-                    log_and_echo \"$ERROR\" \"Failed to execute decision for criterial ${CRITERIAL_NAME} with return error code ${RC}.\"
-                fi
-            else
-                log_and_echo \"$ERROR\" \"Failed to add result rule file ${RESULT_FILE} to DRA with return error code ${RC}.\"
-            fi
-        else
-            log_and_echo \"$ERROR\" \"Failed to get result rule file ${RESULT_FILE}.\"
-        fi
-    fi
 
     if [ \"${ARCHIVE_DIR}\" == \"${WORKSPACE}\" ]; then 
         log_and_echo \"$INFO\" \"Achive directory is the working directory\"
