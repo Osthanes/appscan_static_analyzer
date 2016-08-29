@@ -321,17 +321,13 @@ export LD_LIBRARY_PATH=$APPSCAN_NSTALL_DIR/bin:$LD_LIBRARY_PATH
 debugme appscan.sh version
 
 ############################
-# enable DRA               #
+# setup DRA                #
 ############################
-source $EXT_DIR/utilities/dra_utils.sh
-export DRA_ENABLED=1
-export CRITERIAL_NAME="appscan_criterial"
-setup_dra "${CRITERIAL_NAME}"
-RESULT=$?
-if [ $RESULT -eq 0 ]; then
-    log_and_echo "Successfully Setup DRA for criterial name '${CRITERIAL_NAME}'."
-elif [ $RESULT -gt 1 ]; then
-    log_and_echo "$WARN" "Failed to setup DRA for criterial name '${CRITERIAL_NAME}'."
-fi
+pushd $EXT_DIR >/dev/null
+git clone https://github.com/jparra5/dra_utilities.git dra_utilities
+popd >/dev/null
+
+# Call common initialization
+source $EXT_DIR/dra_utilities/init.sh
 
 log_and_echo "$LABEL" "Initialization complete"

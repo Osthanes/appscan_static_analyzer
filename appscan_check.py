@@ -533,13 +533,29 @@ def appscan_info (jobid):
     return return_info
 
 # get the result file for a given job
-def appscan_get_result (jobid):
+def appscan_get_result (jobid, scan_name):
     if jobid == None:
-        return
+        raise Exception("No jobid to get results")
 
-    proc = Popen(["appscan.sh get_result -i " + str(jobid)], 
-                      shell=True, stdout=PIPE, stderr=PIPE)
+    # App name might have a space.
+    scan_name = scan_name.replace(" ", "-");
+
+    # Get the appscan zip file
+    proc = Popen(["appscan.sh get_result -i " + str(jobid) + " -d appscan-" + str(scan_name) + ".zip -t zip"],
+                      shell=True, stdout=PIPE, stderr=PIPE, cwd=os.environ.get('EXT_DIR'))
     out, err = proc.communicate();
+
+
+    print "Out = " + out
+    print "Err = " + err
+    return return_info
+
+# get the result file for a given job
+def upload_results_to_dra ():
+    proc = Popen(["dra.sh"],
+                      shell=True, stdout=PIPE, stderr=PIPE, cwd=os.environ.get('EXT_DIR'))
+    out, err = proc.communicate();
+
 
     print "Out = " + out
     print "Err = " + err
@@ -651,6 +667,11 @@ def wait_for_scans (joblist):
                         med_issue_count += results["NMediumIssues"]
                         python_utils.LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
+
+                        # Search for file name results["Name"] + "*.zip"
+                        if os.environ.get('DRA_IS_PRESENT') == "1":
+                            appscan_get_result(jobid, results["Name"]);
+
                         #appscan_get_result(jobid)
                         print python_utils.LABEL_GREEN + python_utils.STARS
                         print "Analysis successful for job \"" + results["Name"] + "\""
@@ -724,6 +745,9 @@ def wait_for_scans (joblist):
     appscan_result_file = './appscan-result.json'
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
+    
+    if os.environ.get('DRA_IS_PRESENT') == "1":
+        upload_results_to_dra()
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
