@@ -669,7 +669,8 @@ def wait_for_scans (joblist):
                         #print "\tOther Message : " + msg
 
                         # Search for file name results["Name"] + "*.zip"
-                        appscan_get_result(jobid, results["Name"]);
+                        if os.environ.get('DRA_IS_PRESENT') == "1":
+                            appscan_get_result(jobid, results["Name"]);
 
                         #appscan_get_result(jobid)
                         print python_utils.LABEL_GREEN + python_utils.STARS
@@ -744,8 +745,9 @@ def wait_for_scans (joblist):
     appscan_result_file = './appscan-result.json'
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
-
-    upload_results_to_dra()
+    
+    if os.environ.get('DRA_IS_PRESENT') == "1":
+        upload_results_to_dra()
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
