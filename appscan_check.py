@@ -758,7 +758,8 @@ def wait_for_scans (joblist):
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
 
-    upload_results_to_dra()
+    if os.environ.get('DRA_IS_PRESENT') == "1":
+        upload_results_to_dra()
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
