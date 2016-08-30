@@ -53,26 +53,23 @@ do
     resultDirectory="appscanResultDir"
     unzip $zipFile -d $resultDirectory
 
-    export DRA_LOG_FILE="$resultDirectory/Report-final.xml"
-
+    # full report location
+    export DRA_LOG_FILE="$EXT_DIR/$resultDirectory/Report-final.xml"
+    # summary report location. Replace appscan-app.zip with appscan-app.json.
+    export DRA_SUMMARY_FILE="$EXT_DIR/${zipFile%.zip}.json"
 
     # Upload to DRA
     if [ -n "${ENV_NAME}" ] && [ "${ENV_NAME}" != " " ] && \
         [ -n "${APP_NAME}" ] && [ "${APP_NAME}" != " " ]; then
 
-        if [ -n "${DRA_LOG_FILE}" ] && [ "${DRA_LOG_FILE}" != " " ]; then
-
-            dra_commands "${DRA_LOG_FILE}" "${ENV_NAME}" "${APP_NAME}" "${zipFile}" "codescan"
-
-        else
-            echo -e "${no_color}"
-            echo -e "${red}Location must be declared."
-            echo -e "${no_color}"
-        fi
+        # upload the full appscan report
+        dra_commands "${DRA_LOG_FILE}" "${ENV_NAME}" "${APP_NAME}" "${zipFile}" "codescan"
+        # upload the summary appscan report
+        dra_commands "${DRA_SUMMARY_FILE}" "${ENV_NAME}" "${APP_NAME}" "${DRA_SUMMARY_FILE}" "codescansummary"
 
     else
         echo -e "${no_color}"
-        echo -e "${red}Environment Name and Application Name must be declared."
+        echo -e "${red}Deployment Risk Analytics requires the Environment Name (ENV_NAME) and Application Name (APP_NAME) variables."
         echo -e "${no_color}"
     fi
 
