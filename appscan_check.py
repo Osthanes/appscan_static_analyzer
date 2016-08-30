@@ -81,7 +81,7 @@ def print_help ():
 
 
 # create a template for a current scan.  this will be in the format
-# "<scanname>-<version>-" where scanname comes from env var 
+# "<scanname>-<version>-" where scanname comes from env var
 # 'SUBMISSION_NAME', and version comes from env var 'APPLICATION_VERSION'
 def get_scanname_template (include_version=True):
     # check the env for name of the scan, else use default
@@ -104,7 +104,7 @@ def get_scanname_template (include_version=True):
 # given userid and password, attempt to authenticate to appscan for
 # future calls
 def appscan_login (userid, password):
-    proc = Popen(["appscan.sh login -u " + userid + " -P " + password + ""], 
+    proc = Popen(["appscan.sh login -u " + userid + " -P " + password + ""],
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
@@ -131,7 +131,7 @@ def appscan_prepare ():
         if os.path.isfile( logfileName ):
             os.remove( logfileName )
 
-    proc = Popen(["appscan.sh prepare"], 
+    proc = Popen(["appscan.sh prepare"],
                  shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
@@ -143,7 +143,7 @@ def appscan_prepare ():
         else:
             if python_utils.DEBUG:
                 call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
-            raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
+            raise Exception("Unable to prepare code for analysis by Static Analysis service: " +
                             err)
 
     # what files are there now?
@@ -172,7 +172,7 @@ def appscan_submit (filelist):
     for filename in filelist:
         submit_scanname = get_scanname_template() + str(index)
         proc = Popen(["appscan.sh queue_analysis -f " + filename +
-                      " -n " + submit_scanname], 
+                      " -n " + submit_scanname],
                           shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
 
@@ -200,7 +200,7 @@ def appscan_submit (filelist):
 
 # get appscan list of current jobs
 def appscan_list ():
-    proc = Popen(["appscan.sh list"], 
+    proc = Popen(["appscan.sh list"],
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
@@ -303,7 +303,7 @@ def appscan_status (jobid):
     if jobid == None:
         raise Exception("No jobid to check status")
 
-    proc = Popen(["appscan.sh status -i " + str(jobid)], 
+    proc = Popen(["appscan.sh status -i " + str(jobid)],
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
@@ -321,7 +321,7 @@ def appscan_cancel (jobid):
     if jobid == None:
         return
 
-    proc = Popen(["appscan.sh cancel -i " + str(jobid)], 
+    proc = Popen(["appscan.sh cancel -i " + str(jobid)],
                       shell=True, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate();
 
@@ -706,12 +706,12 @@ def wait_for_scans (joblist):
 
                         # append results to the jobResults for the json format
                         jobResults.append(job_result)
-                    else: 
+                    else:
                         python_utils.LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
 
                         # append results to the jobResults for the json format
-                        jobResults.append({'job_name': results["Name"], 
-                                           'job_id': jobid, 
+                        jobResults.append({'job_name': results["Name"],
+                                           'job_id': jobid,
                                            'status': "unsuccessful"})
 
                     break
@@ -737,8 +737,8 @@ def wait_for_scans (joblist):
                         print python_utils.STARS + python_utils.LABEL_NO_COLOR
 
                         # append results to the jobResults for the json format
-                        jobResults.append({'job_name': results["Name"], 
-                                           'job_id': jobid, 
+                        jobResults.append({'job_name': results["Name"],
+                                           'job_id': jobid,
                                            'status': "incomplete",
                                            'percentage_complete': int(str(results["Progress"]))})
 
@@ -749,16 +749,17 @@ def wait_for_scans (joblist):
             if python_utils.DEBUG:
                 python_utils.LOGGER.debug("exception in wait_for_scans: " + str(e))
 
-    # generate appscan-result.json file 
-    appscan_result = {'all_jobs_complete': all_jobs_complete, 
-                      'high_issue_count': high_issue_count, 
+    # generate appscan-result.json file
+    appscan_result = {'all_jobs_complete': all_jobs_complete,
+                      'high_issue_count': high_issue_count,
                       'medium_issue_count': med_issue_count,
                       'job_results': jobResults}
     appscan_result_file = './appscan-result.json'
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
 
-    upload_results_to_dra()
+    if os.environ.get('DRA_IS_PRESENT') == "1":
+        upload_results_to_dra()
 
     return all_jobs_complete, high_issue_count, med_issue_count
 
@@ -772,18 +773,18 @@ try:
         sys.exit(0)
 
     python_utils.LOGGER = python_utils.setup_logging()
-    # send slack notification 
+    # send slack notification
     if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
         command='{path}/utilities/sendMessage.sh -l info -m \"Starting static security scan\"'.format(path=python_utils.EXT_DIR)
         if python_utils.DEBUG:
-            print "running command " + command 
+            print "running command " + command
         proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate();
         python_utils.LOGGER.debug(out)
     else:
         if python_utils.DEBUG:
             print "sendMessage.sh not found, notifications not attempted"
-    
+
     python_utils.WAIT_TIME = python_utils.get_remaining_wait_time(first = True)
     python_utils.LOGGER.info("Getting credentials for Static Analysis service")
     creds = python_utils.get_credentials_for_non_binding_service(service=APP_SECURITY_SERVICE)
@@ -855,7 +856,7 @@ try:
 
     # if we didn't successfully complete jobs, return that we timed out
     if not all_jobs_complete:
-        # send slack notification 
+        # send slack notification
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
             dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
             command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> did not complete within {wait} minutes.  Stage will need to be re-run after the scan completes.\"'.format(path=python_utils.EXT_DIR,url=dash,wait=python_utils.FULL_WAIT_TIME)
@@ -868,26 +869,26 @@ try:
         sys.exit(2)
     else:
         if high_issue_count > 0:
-            # send slack notification 
+            # send slack notification
             if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
                 dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='{path}/utilities/sendMessage.sh -l bad -m \"<{url}|Static security scan> completed with {issues} high issues detected in the application.\"'.format(path=python_utils.EXT_DIR,url=dash, issues=high_issue_count)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
                 python_utils.LOGGER.debug(out)
-            
+
             endtime = timeit.default_timer()
             print "Script completed in " + str(endtime - python_utils.SCRIPT_START_TIME) + " seconds"
             sys.exit(3)
 
         if os.path.isfile("%s/utilities/sendMessage.sh" % python_utils.EXT_DIR):
-            if med_issue_count > 0: 
+            if med_issue_count > 0:
                 dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='SLACK_COLOR=\"warning\" {path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate();
                 python_utils.LOGGER.debug(out)
-            else:            
+            else:
                 dash = python_utils.find_service_dashboard(APP_SECURITY_SERVICE)
                 command='{path}/utilities/sendMessage.sh -l good -m \"<{url}|Static security scan> completed with no major issues.\"'.format(path=python_utils.EXT_DIR,url=dash)
                 proc = Popen([command], shell=True, stdout=PIPE, stderr=PIPE)
