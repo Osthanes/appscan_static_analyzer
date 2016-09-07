@@ -548,7 +548,16 @@ def appscan_get_result (jobid, scan_name):
 
     print "Out = " + out
     print "Err = " + err
-    return return_info
+
+# get the result file for a given job
+def save_job_result (scan_name, job_result):
+
+    # App name might have a space.
+    scan_name = scan_name.replace(" ", "-");
+
+    # Store the job result summary
+    with open(os.environ.get('EXT_DIR') + "/appscan-" + str(scan_name) + ".json", 'w') as outfile:
+        json.dump(job_result, outfile, sort_keys = True)
 
 # get the result file for a given job
 def upload_results_to_dra ():
@@ -668,9 +677,18 @@ def wait_for_scans (joblist):
                         python_utils.LOGGER.info("Analysis successful (" + results["Name"] + ")")
                         #print "\tOther Message : " + msg
 
+                        job_result = {  'job_name': results["Name"],
+                                        'job_id': jobid,
+                                        'status': "successful",
+                                        'high_severity_issues': int(str(results["NHighIssues"])),
+                                        'medium_severity_issues': int(str(results["NMediumIssues"])),
+                                        'low_severity_issues': int(str(results["NLowIssues"])),
+                                        'info_severity_issues': int(str(results["NInfoIssues"]))}
+
                         # Search for file name results["Name"] + "*.zip"
                         if os.environ.get('DRA_IS_PRESENT') == "1":
                             appscan_get_result(jobid, results["Name"]);
+                            save_job_result(results["Name"], job_result);
 
                         #appscan_get_result(jobid)
                         print python_utils.LABEL_GREEN + python_utils.STARS
@@ -687,13 +705,7 @@ def wait_for_scans (joblist):
                         print python_utils.LABEL_GREEN + python_utils.STARS + python_utils.LABEL_NO_COLOR
 
                         # append results to the jobResults for the json format
-                        jobResults.append({'job_name': results["Name"], 
-                                           'job_id': jobid, 
-                                           'status': "successful",
-                                           'high_severity_issues': int(str(results["NHighIssues"])),
-                                           'medium_severity_issues': int(str(results["NMediumIssues"])),
-                                           'low_severity_issues': int(str(results["NLowIssues"])),
-                                           'info_severity_issues': int(str(results["NInfoIssues"]))})
+                        jobResults.append(job_result)
                     else: 
                         python_utils.LOGGER.info("Analysis unsuccessful (" + results["Name"] + ") with message \"" + results["UserMessage"] + "\"")
 
@@ -745,7 +757,7 @@ def wait_for_scans (joblist):
     appscan_result_file = './appscan-result.json'
     with open(appscan_result_file, 'w') as outfile:
         json.dump(appscan_result, outfile, sort_keys = True)
-    
+
     if os.environ.get('DRA_IS_PRESENT') == "1":
         upload_results_to_dra()
 
