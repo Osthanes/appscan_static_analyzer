@@ -6,20 +6,18 @@ function dra_commands {
 
     dra_grunt_command="grunt --gruntfile=$node_modules_dir/grunt-idra3/idra.js"
     dra_grunt_command="$dra_grunt_command -testResult=\"$1\""
-    dra_grunt_command="$dra_grunt_command -env=\"$2\""
-    dra_grunt_command="$dra_grunt_command -runtime=\"$3\""
-    dra_grunt_command="$dra_grunt_command -stage=\"$5\""
+    dra_grunt_command="$dra_grunt_command -stage=\"$3\""
 
-    debugme echo -e "dra_grunt_command with tool, log, env, & stage: \n\t$dra_grunt_command"
+    debugme echo -e "dra_grunt_command with log & stage: \n\t$dra_grunt_command"
 
-    if [ -n "$4" ] && [ "$4" != " " ]; then
+    if [ -n "$2" ] && [ "$2" != " " ]; then
 
-        debugme echo -e "\tartifact: '$4' is defined and not empty"
-        dra_grunt_command="$dra_grunt_command -artifact=\"$4\""
+        debugme echo -e "\tartifact: '$2' is defined and not empty"
+        dra_grunt_command="$dra_grunt_command -artifact=\"$2\""
         debugme echo -e "\tdra_grunt_command: \n\t\t$dra_grunt_command"
 
     else
-        debugme echo -e "\tartifact: '$4' is not defined or is empty"
+        debugme echo -e "\tartifact: '$2' is not defined or is empty"
         debugme echo -e "${no_color}"
     fi
 
@@ -59,19 +57,12 @@ do
     export DRA_SUMMARY_FILE="$EXT_DIR/${zipFile%.zip}.json"
 
     # Upload to DRA
-    if [ -n "${ENV_NAME}" ] && [ "${ENV_NAME}" != " " ] && \
-        [ -n "${APP_NAME}" ] && [ "${APP_NAME}" != " " ]; then
 
-        # upload the full appscan report
-        dra_commands "${DRA_LOG_FILE}" "${ENV_NAME}" "${APP_NAME}" "${zipFile}" "codescan"
-        # upload the summary appscan report
-        dra_commands "${DRA_SUMMARY_FILE}" "${ENV_NAME}" "${APP_NAME}" "${DRA_SUMMARY_FILE}" "codescansummary"
+    # upload the full appscan report
+    dra_commands "${DRA_LOG_FILE}" "${zipFile}" "codescan"
+    # upload the summary appscan report
+    dra_commands "${DRA_SUMMARY_FILE}" "${DRA_SUMMARY_FILE}" "codescansummary"
 
-    else
-        echo -e "${no_color}"
-        echo -e "${red}Deployment Risk Analytics requires the Environment Name (ENV_NAME) and Application Name (APP_NAME) variables."
-        echo -e "${no_color}"
-    fi
 
 
     # Clean up directory
