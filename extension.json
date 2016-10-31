@@ -40,7 +40,6 @@
         "shell": "#!/bin/bash
 set +x
 set +e
-env
 export INIT_START_TIME=$(date +\"%s\")
 export SETUP_SERVICE_SPACE=#SETUP_SERVICE_SPACE#
 export WAIT_TIME=#WAIT_TIME#
