@@ -43,6 +43,9 @@ function dra_commands {
 
 
 
+
+installDRADependencies
+
 echo ""
 
 for zipFile in appscan-*.zip;
