@@ -66,10 +66,6 @@ end_script_time() {
 # Calls OTC api to determine if DRA is present.
 callOpenToolchainAPI
 
-if [ $DRA_IS_PRESENT -eq 1 ]; then
-    installDRADependencies
-fi
-
 # run the python IBM Security Static Analyzer checker, dump results on output
 if [ -f ${EXT_DIR}/appscan_check.py ]; then 
     if [[ $DEBUG -eq 1 ]]; then
