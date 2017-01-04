@@ -62,9 +62,9 @@ do
     # Upload to DRA
 
     # upload the full appscan report
-    dra_commands "${DRA_LOG_FILE}" "${zipFile}" "codescan"
+    #dra_commands "${DRA_LOG_FILE}" "${zipFile}" "codescan"
     # upload the summary appscan report
-    dra_commands "${DRA_SUMMARY_FILE}" "${DRA_SUMMARY_FILE}" "codescansummary"
+    dra_commands "${DRA_SUMMARY_FILE}" "${DRA_SUMMARY_FILE}" "staticsecurityscan"
 
 
 
