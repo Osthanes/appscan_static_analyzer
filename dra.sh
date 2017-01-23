@@ -7,6 +7,7 @@ function dra_commands {
     dra_grunt_command="grunt --gruntfile=$node_modules_dir/grunt-idra3/idra.js"
     dra_grunt_command="$dra_grunt_command -testResult=\"$1\""
     dra_grunt_command="$dra_grunt_command -stage=\"$3\""
+    dra_grunt_command="$dra_grunt_command -drilldownUrl=\"$4\""
 
     debugme echo -e "dra_grunt_command with log & stage: \n\t$dra_grunt_command"
 
@@ -59,12 +60,16 @@ do
     # summary report location. Replace appscan-app.zip with appscan-app.json.
     export DRA_SUMMARY_FILE="$EXT_DIR/${zipFile%.zip}.json"
 
+    # pass appscan report url to DRA
+    json=`cat ${DRA_SUMMARY_FILE}`
+    appscan_url=`python -c "import json; obj = json.loads('$json'); print( obj['url'] );"`
+
     # Upload to DRA
 
     # upload the full appscan report
-    #dra_commands "${DRA_LOG_FILE}" "${zipFile}" "codescan"
+    dra_commands "${DRA_LOG_FILE}" "${zipFile}" "staticsecurityscan" "${appscan_url}"
     # upload the summary appscan report
-    dra_commands "${DRA_SUMMARY_FILE}" "${DRA_SUMMARY_FILE}" "staticsecurityscan"
+    #dra_commands "${DRA_SUMMARY_FILE}" "${DRA_SUMMARY_FILE}" "staticsecurityscan"
 
 
 

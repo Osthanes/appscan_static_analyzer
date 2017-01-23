@@ -683,7 +683,8 @@ def wait_for_scans (joblist):
                                         'high_severity_issues': int(str(results["NHighIssues"])),
                                         'medium_severity_issues': int(str(results["NMediumIssues"])),
                                         'low_severity_issues': int(str(results["NLowIssues"])),
-                                        'info_severity_issues': int(str(results["NInfoIssues"]))}
+                                        'info_severity_issues': int(str(results["NInfoIssues"])),
+                                        'url': dash}
 
                         # Search for file name results["Name"] + "*.zip"
                         if os.environ.get('DRA_IS_PRESENT') == "1":
