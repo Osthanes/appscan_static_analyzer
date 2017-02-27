@@ -142,7 +142,7 @@ def appscan_prepare ():
             python_utils.LOGGER.warning("Not all files could be scanned, but the scan has been submitted for those which were")
         else:
             if python_utils.DEBUG:
-                call(["cat $APPSCAN_INSTALL_DIR/logs/client.log"], shell=True)
+                call(["grep -H \".*\" logs/*.log"], shell=True, cwd="$APPSCAN_INSTALL_DIR")
             raise Exception("Unable to prepare code for analysis by Static Analysis service: " + 
                             err)
 
